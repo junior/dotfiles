@@ -1,0 +1,16 @@
+{{ if eq .machine "wsl-work" -}}
+#!/bin/bash
+# System (apt) packages for wsl-work that aren't available via mise.
+# Re-runs only when this file changes — add to the list below as you need them.
+set -euo pipefail
+
+packages=(
+  zip            # make .zip archives (tar is built-in; zip is handy on Windows)
+  sshpass        # non-interactive ssh password auth (used by private-overlay tooling); not in mise's registry
+)
+
+echo ">>> apt packages: ${packages[*]}"
+sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}"
+echo ">>> apt packages: done"
+{{- end }}

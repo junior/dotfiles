@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+{{ if eq .machine "wsl-work" -}}
+# Real docker CLI against ROOTLESS PODMAN ("Option A" — one engine, no daemon):
+# the genuine docker client (mise: docker-cli) talks to podman's Docker-compatible
+# API socket, so `docker image ls` == `podman image ls`. DOCKER_HOST is exported
+# in .zshrc.
+#
+# This is a plain run_ script: it executes on EVERY `chezmoi apply` (i.e. every
+# `up`) so the docker CLI plugins TRACK UPSTREAM LATEST — a download happens only
+# when the release tag differs from the recorded one (.<plugin>.version sidecar
+# files); otherwise it's two cheap API calls. Network failures WARN and keep the
+# current binaries — `up` never breaks offline.
+#
+# Plugins managed here (no Docker Desktop on WSL to bundle them; on the mac both
+# come with Desktop and update on its cadence):
+#   docker-dhi   — DHI CLI  (github.com/docker-hardened-images/dhictl, raw binary)
+#   docker-scout — Scout    (github.com/docker/scout-cli, tarball)
+# The old podman-docker apt emulator shim is superseded: sudo apt-get remove podman-docker
+set -eu
+
+echo ">>> docker-on-podman: ensuring rootless podman API socket"
+systemctl --user enable --now podman.socket
+systemctl --user is-active --quiet podman.socket && echo ">>> podman.socket active"
+
+PLUGIN_DIR="$HOME/.docker/cli-plugins"
+mkdir -p "$PLUGIN_DIR"
+
+# Authenticated API calls when GITHUB_TOKEN is set (corp NAT shares the anon limit).
+fetch_latest_tag() {  # $1 = owner/repo -> prints tag or nothing on failure
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    curl -fsSL -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$1/releases/latest" 2>/dev/null
+  else
+    curl -fsSL "https://api.github.com/repos/$1/releases/latest" 2>/dev/null
+  fi | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1
+}
+
+# ---- docker-dhi (raw binary asset) ----
+latest="$(fetch_latest_tag docker-hardened-images/dhictl || true)"
+cur="$(cat "$PLUGIN_DIR/.docker-dhi.version" 2>/dev/null || true)"
+if [ -z "$latest" ]; then
+  echo ">>> WARN: cannot resolve dhictl latest (offline/rate-limit?) — keeping ${cur:-none}"
+elif [ "$latest" = "$cur" ] && [ -x "$PLUGIN_DIR/docker-dhi" ]; then
+  echo ">>> docker-dhi $cur is current"
+else
+  echo ">>> docker-dhi: ${cur:-none} -> $latest"
+  tmp="$(mktemp)"
+  if curl -fsSL -o "$tmp" \
+       "https://github.com/docker-hardened-images/dhictl/releases/download/${latest}/dhictl-linux-amd64"; then
+    install -m 0755 "$tmp" "$PLUGIN_DIR/docker-dhi"
+    printf '%s\n' "$latest" > "$PLUGIN_DIR/.docker-dhi.version"
+    echo ">>> docker-dhi $latest installed"
+  else
+    echo ">>> WARN: dhictl download failed — keeping ${cur:-none}"
+  fi
+  rm -f "$tmp"
+fi
+
+# ---- docker-scout (versioned tarball asset) ----
+latest="$(fetch_latest_tag docker/scout-cli || true)"
+cur="$(cat "$PLUGIN_DIR/.docker-scout.version" 2>/dev/null || true)"
+if [ -z "$latest" ]; then
+  echo ">>> WARN: cannot resolve scout latest (offline/rate-limit?) — keeping ${cur:-none}"
+elif [ "$latest" = "$cur" ] && [ -x "$PLUGIN_DIR/docker-scout" ]; then
+  echo ">>> docker-scout $cur is current"
+else
+  echo ">>> docker-scout: ${cur:-none} -> $latest"
+  ver="${latest#v}"
+  tmpd="$(mktemp -d)"
+  if curl -fsSL -o "$tmpd/scout.tgz" \
+       "https://github.com/docker/scout-cli/releases/download/${latest}/docker-scout_${ver}_linux_amd64.tar.gz" \
+     && tar -xzf "$tmpd/scout.tgz" -C "$tmpd" docker-scout; then
+    install -m 0755 "$tmpd/docker-scout" "$PLUGIN_DIR/docker-scout"
+    printf '%s\n' "$latest" > "$PLUGIN_DIR/.docker-scout.version"
+    echo ">>> docker-scout $latest installed"
+  else
+    echo ">>> WARN: scout download failed — keeping ${cur:-none}"
+  fi
+  rm -rf "$tmpd"
+fi
+{{ end -}}

@@ -1,0 +1,50 @@
+{{- /* ~/.gitconfig — managed by chezmoi. Personal identity by default; a work
+       machine overrides the email via ~/.gitconfig.local (see [include] at end). */ -}}
+[user]
+	name = Adao Oliveira Jr
+	email = junior@users.noreply.github.com
+
+[core]
+	pager = delta
+	editor = code --wait
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	navigate = true
+	line-numbers = true
+	side-by-side = false
+
+[merge]
+	conflictStyle = zdiff3
+
+[diff]
+	colorMoved = default
+
+[init]
+	defaultBranch = main
+
+[push]
+	autoSetupRemote = true
+
+[pull]
+	rebase = false
+
+[fetch]
+	prune = true
+
+# Work machines drop a ~/.gitconfig.local (from the private overlay) that
+# overrides the email above; git silently ignores a missing include.
+[include]
+	path = ~/.gitconfig.local
+{{- if lookPath "git-lfs" }}
+
+# Managed here so `git lfs install` doesn't drift ~/.gitconfig out-of-band.
+# Only emitted where git-lfs is actually installed (required=true errors otherwise).
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+{{- end }}

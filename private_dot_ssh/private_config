@@ -1,0 +1,32 @@
+# ~/.ssh/config — managed by chezmoi (wsl-work only; ignored on other machines)
+
+# Employer-specific hosts (corp git, VPN bastions) come from the private overlay.
+# IMPORTANT: Include must precede all Host blocks. An Include placed *inside* a
+# Host block is only processed when connecting to that host (ssh scopes it), which
+# would hide config.d/* from every other host. First-match also means the overlay
+# can override the cores below.
+Include ~/.ssh/config.d/*
+
+# Deploy key for the public dotfiles repo (read-only) — chezmoi update uses this.
+# Source remote must be git@github-dotfiles:junior/dotfiles.git
+# SSH over 443: the corp security stack (Azure-hosted egress — "connection closed by
+# 4.208.x.x") intermittently kills outbound :22; ssh.github.com:443 is GitHub's
+# official alternative endpoint (same host keys, same auth), and 443 egress is clean.
+Host github-dotfiles
+  HostName ssh.github.com
+  Port 443
+  User git
+  IdentityFile ~/.ssh/dotfiles_deploy
+  IdentitiesOnly yes
+
+# Global defaults (catch-all; LAST so specific Host blocks and config.d/* win first-match).
+# Keep long-running/idle sessions alive through corp NAT/firewall idle timeouts — the usual
+# cause of "connection reset by peer" on the jump hosts: when the session goes quiet the
+# middlebox drops its state, then RSTs the next packet. Encrypted SSH-layer keepalives keep
+# traffic flowing so the state never expires. ServerAliveCountMax x ServerAliveInterval
+# (~150s) is how long an actual network blip is tolerated before the client gives up;
+# TCPKeepAlive no = rely on these forgiving SSH-layer probes, not the blunter TCP-layer ones.
+Host *
+  ServerAliveInterval 30
+  ServerAliveCountMax 5
+  TCPKeepAlive no

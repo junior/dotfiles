@@ -1,0 +1,33 @@
+{{ if eq .machine "wsl-work" -}}
+#!/bin/bash
+# eBPF host tooling (wsl-work) — re-runs whenever this script's content changes.
+# bpftool intentionally NOT from apt: Ubuntu ties it to linux-tools-$(uname -r),
+# which never matches the Microsoft WSL2 kernel — it comes via mise (ubi backend).
+set -euo pipefail
+
+echo ">>> eBPF tooling: installing apt packages (sudo may prompt)"
+sudo apt-get update -qq
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y bpftrace bpfcc-tools
+
+# bpftool: Ubuntu packages it inside linux-tools-$(uname -r), which never
+# matches the WSL2 kernel, and the upstream tarball ships the binary without
+# an exec bit (defeats mise's bin detection) — so install it here system-wide.
+# /usr/local/bin is in sudo's secure_path, so plain `sudo bpftool` works.
+BPFTOOL_VERSION=7.7.0
+if [[ "$(bpftool version 2>/dev/null | head -1)" != *"v${BPFTOOL_VERSION}"* ]]; then
+  echo ">>> installing bpftool v${BPFTOOL_VERSION} to /usr/local/bin"
+  tmp=$(mktemp -d)
+  curl -fsSL "https://github.com/libbpf/bpftool/releases/download/v${BPFTOOL_VERSION}/bpftool-v${BPFTOOL_VERSION}-amd64.tar.gz" | tar -xz -C "$tmp"
+  sudo install -m 0755 "$tmp/bpftool" /usr/local/bin/bpftool
+  rm -rf "$tmp"
+fi
+
+# Persistent BPF filesystem — needed for program/map pinning (Cilium/Calico,
+# bpftool prog pin). WSL processes /etc/fstab at distro boot (mountFsTab=true).
+if ! grep -qE '^\S+\s+/sys/fs/bpf\s+bpf' /etc/fstab; then
+  echo 'bpffs /sys/fs/bpf bpf defaults 0 0' | sudo tee -a /etc/fstab >/dev/null
+fi
+mountpoint -q /sys/fs/bpf || sudo mount /sys/fs/bpf
+
+echo ">>> eBPF tooling: done"
+{{- end }}

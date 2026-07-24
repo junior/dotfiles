@@ -1,0 +1,39 @@
+# kind cluster for the Calico eBPF dataplane: 1 control-plane + 2 workers,
+# no default CNI, and NO kube-proxy — in eBPF mode Felix replaces it entirely.
+# Per-node bpffs is mounted by systemd inside each node; no extraMounts needed.
+#
+# Create (wsl-work: rkind / mac-personal: kind):
+#   kind create cluster --config ~/.config/kind/calico-ebpf.yaml
+# With kube-proxy absent, Felix must be told where the API server is BEFORE
+# Calico comes up:
+#   kubectl create namespace tigera-operator
+#   kubectl create cm kubernetes-services-endpoint -n tigera-operator \
+#     --from-literal=KUBERNETES_SERVICE_HOST=<control-plane node IP> \
+#     --from-literal=KUBERNETES_SERVICE_PORT=6443
+# then install the tigera-operator and set in the Installation CR:
+#   spec.calicoNetwork.linuxDataplane: BPF
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  disableDefaultCNI: true
+  kubeProxyMode: none
+  podSubnet: "192.168.0.0/16"
+nodes:
+{{- if eq .machine "wsl-work" }}
+# Corporate TLS-intercepting proxy: mount the host's system trust bundle over
+# each node's bundle so containerd/kubelet trust the corporate CA. Nodes never
+# run update-ca-certificates, so the bundle is mounted in directly.
+- role: control-plane
+  extraMounts: &ca-mounts
+  - hostPath: /etc/ssl/certs/ca-certificates.crt
+    containerPath: /etc/ssl/certs/ca-certificates.crt
+    readOnly: true
+- role: worker
+  extraMounts: *ca-mounts
+- role: worker
+  extraMounts: *ca-mounts
+{{- else }}
+- role: control-plane
+- role: worker
+- role: worker
+{{- end }}

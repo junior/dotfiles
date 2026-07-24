@@ -1,0 +1,140 @@
+{{- if eq .machine "mac-personal" -}}
+# Brewfile (mac-personal) — apply with `brew bundle --global`
+# Languages (node, python, terraform, opentofu) are managed by mise.
+
+# --- Taps ---
+tap "junior/tap"
+
+# --- Formulae: shell + completions ---
+brew "powerlevel10k"
+brew "zsh"
+brew "zsh-autosuggestions"
+brew "zsh-completions"
+brew "zsh-history-substring-search"
+brew "zsh-syntax-highlighting"
+
+# --- Formulae: cloud CLIs (not via mise) ---
+brew "aliyun-cli"
+brew "awscli"
+brew "azure-cli"
+brew "oci-cli"
+brew "vercel-cli"
+
+# --- Formulae: kubernetes / cloud-native ---
+brew "calicoctl"
+brew "cilium-cli"
+brew "cosign"
+brew "dive"
+brew "falcoctl"
+brew "grype"
+brew "helm"
+brew "istioctl"
+brew "k3d"
+brew "k9s"
+brew "kind"
+brew "krew"
+brew "ktop"
+brew "kubecolor"
+brew "kubectx"
+brew "kubeshark"
+brew "minikube"
+brew "operator-sdk"
+brew "stern"
+brew "syft"
+brew "trivy"
+
+# --- Formulae: dev utilities ---
+brew "asciinema"
+brew "bat"
+brew "chezmoi"
+brew "direnv"
+brew "duf"
+brew "eza"
+brew "fd"
+brew "fx"
+brew "fzf"
+brew "gh"
+brew "git"
+brew "git-filter-repo"
+brew "git-lfs"
+brew "httpie"
+brew "jq"
+brew "mkcert"
+brew "ripgrep"
+brew "junior/tap/skilla"
+brew "terraform-docs"
+brew "tfsec"
+brew "vsce"
+brew "yh"
+brew "yq"
+brew "zoxide"
+
+# --- Formulae: system / misc ---
+brew "agg"
+brew "autoconf"
+brew "ffmpeg"
+brew "ghostscript"
+brew "gifsicle"
+brew "htop"
+brew "imagemagick"
+brew "librsvg"
+brew "mise"
+brew "pipx"
+brew "timewarrior"
+brew "tmux"
+brew "uv"
+
+# --- Casks: terminal + editors ---
+cask "cursor"
+cask "ghostty"
+cask "visual-studio-code"
+
+# --- Casks: browsers ---
+cask "arc"
+cask "firefox"
+cask "google-chrome"
+cask "google-chrome@canary"   # renamed upstream from google-chrome-canary (old name 404s)
+cask "tor-browser"
+
+# --- Casks: containers + Kubernetes UIs ---
+cask "docker-desktop"
+cask "freelens"
+cask "openlens"
+cask "stratoshark"
+
+# --- Casks: communication + productivity ---
+cask "discord"
+cask "microsoft-teams"
+cask "notion"
+cask "webex"
+cask "zoom"
+
+# --- Casks: dev tools / API ---
+cask "apidog"
+cask "charles"
+cask "dash"
+cask "drawio"
+cask "github"
+cask "gitkraken"
+cask "gpg-suite"
+cask "httpie-desktop"
+cask "jetbrains-toolbox"
+cask "kaleidoscope"
+cask "mitmproxy"
+cask "ngrok"
+cask "postman"
+cask "termius"
+cask "tower"
+
+# --- Casks: AI / misc ---
+cask "chatgpt"
+cask "chatgpt-atlas"
+cask "codex"
+cask "grammarly-desktop"
+cask "licecap"
+cask "lm-studio"
+cask "microsoft-auto-update"
+
+# --- Casks: fonts ---
+cask "font-meslo-lg-nerd-font"
+{{- end }}

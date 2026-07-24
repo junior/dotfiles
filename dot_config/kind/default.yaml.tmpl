@@ -1,0 +1,24 @@
+# kind cluster: 1 control-plane + 2 workers, default CNI (kindnet) — for
+# quick test clusters that don't need Calico; ready as soon as create finishes.
+# Create with: kind create cluster --config ~/.config/kind/default.yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+{{- if eq .machine "wsl-work" }}
+# Corporate TLS-intercepting proxy: mount the host's system trust bundle over
+# each node's bundle so containerd/kubelet trust the corporate CA. Nodes never
+# run update-ca-certificates, so the bundle is mounted in directly.
+- role: control-plane
+  extraMounts: &ca-mounts
+  - hostPath: /etc/ssl/certs/ca-certificates.crt
+    containerPath: /etc/ssl/certs/ca-certificates.crt
+    readOnly: true
+- role: worker
+  extraMounts: *ca-mounts
+- role: worker
+  extraMounts: *ca-mounts
+{{- else }}
+- role: control-plane
+- role: worker
+- role: worker
+{{- end }}

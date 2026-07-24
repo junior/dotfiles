@@ -1,0 +1,5 @@
+README.md
+LICENSE
+{{ if ne .machine "wsl-work" -}}
+.ssh/config
+{{- end }}

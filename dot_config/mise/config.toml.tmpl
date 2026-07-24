@@ -1,0 +1,86 @@
+# mise global config — managed by chezmoi
+# Shared: language runtimes with per-project version sensitivity.
+# Per-machine: WSL uses mise for the full toolchain (no Homebrew there);
+# Mac uses mise only for languages + npm globals — everything else is Homebrew.
+[settings]
+# Precompiled pythons only (python-build-standalone). Source builds break on
+# brand-new macOS SDKs (e.g. unguarded pipe2 on SDK 26.x) and need no toolchain;
+# "latest" then resolves to the newest *precompiled* release.
+python.compile = false
+# Install pipx-backend tools (ansible) via `uv tool` (uvx), not pipx: pipx's
+# hand-off to uv throws a fatal uv error on this box, while `uv tool install`
+# works directly. (uvx uses the `uv` tool, already pinned in [tools] below.)
+pipx.uvx = true
+
+[tools]
+node      = "lts"
+python    = "latest"
+terraform = "latest"
+# regctl is SHARED (mac exception to the brew-first rule, agreed 2026-07-07): homebrew-core
+# has no formula and regclient's official tap is an empty stub, so a junior/tap formula
+# would mean manual version bumps forever. mise's registry auto-tracks upstream's official
+# release binaries. If a real homebrew-core formula ever appears, move the mac to the Brewfile.
+regctl    = "latest"
+
+{{ if eq .machine "wsl-work" -}}
+# === wsl-work: full mise-managed toolchain (no Homebrew on this box) ===
+go        = "latest"
+ansible   = "latest"
+bat       = "latest"
+chezmoi   = "latest"
+cosign    = "latest"
+delta     = "latest"
+direnv    = "latest"
+# Real docker CLI (client only) — talks to rootless podman's Docker-compatible
+# API socket (DOCKER_HOST in .zshrc; socket enabled by run_onchange_setup-docker-cli).
+docker-cli = "latest"
+eza       = "latest"
+fd        = "latest"
+fx        = "latest"
+fzf       = "latest"
+glab      = "latest"
+helm      = "latest"
+istioctl  = "latest"
+jq        = "latest"
+k3d       = "latest"
+k9s       = "latest"
+kind      = "latest"
+kubecolor = "latest"
+kubectl   = "latest"
+kubectx   = "latest"
+kubens    = "latest"
+kustomize = "latest"
+lazygit   = "latest"
+pipx      = "latest"
+ripgrep   = "latest"
+stern     = "latest"
+uv        = "latest"
+yq        = "latest"
+zoxide    = "latest"
+
+"github:falcosecurity/falcoctl"          = "latest"
+"github:kubeshark/kubeshark"             = "latest"
+"github:operator-framework/operator-sdk" = "latest"
+"github:projectcalico/calico"            = "latest"
+# skilla: mise here only — the Mac gets it from Homebrew (junior/tap/skilla).
+"github:junior/skilla" = { version = "0.3.0", exe = "skilla", matching = "skilla" }
+"npm:@vscode/vsce"                       = "latest"
+"npm:snyk"                               = "latest"
+# bpftool is NOT here: upstream tarballs ship the binary without an exec bit,
+# which defeats mise's bin detection — run_onchange_install-ebpf-tools.sh
+# installs it to /usr/local/bin instead (sudo-friendly for a root-only tool).
+#
+# Employer-specific tools (e.g. internal artifact CLIs) are NOT here — they
+# come from the private overlay via ~/.config/mise/conf.d/*.toml, which mise
+# merges automatically.
+{{- end }}
+
+{{ if eq .machine "mac-personal" -}}
+# === mac-personal: opentofu + npm globals (languages above; rest via Homebrew) ===
+opentofu = "latest"
+
+"npm:fantasticon" = "latest"
+
+# Java/JDK lives here when needed (uncomment + adjust version):
+# java = "temurin-21"
+{{- end }}

@@ -1,0 +1,307 @@
+{{- /* ~/.zshrc — managed by chezmoi. machine = "mac-personal" | "wsl-work" */ -}}
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# === PATH base ===
+export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+
+{{ if eq .machine "wsl-work" -}}
+ZSH_PLUGIN_DIR="$HOME/.zsh/plugins"
+{{- else -}}
+# === Homebrew (mac-personal) ===
+for brewbin in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+  [[ -x $brewbin ]] && eval "$($brewbin shellenv)" && break
+done
+ZSH_PLUGIN_DIR="${HOMEBREW_PREFIX:-/opt/homebrew}/share"
+{{- end }}
+
+# === mise (runtime & tool version manager) ===
+command -v mise &>/dev/null && eval "$(mise activate zsh)"
+
+# === Completions & plugins ===
+fpath=("$HOME/.zsh/completions" $fpath)
+{{- if ne .machine "wsl-work" }}
+fpath+=("${HOMEBREW_PREFIX}/share/zsh/site-functions" "${HOMEBREW_PREFIX}/share/zsh-completions")
+{{- end }}
+# Ubuntu's /etc/zsh/zshrc runs compinit before this file, against a dump
+# built before the fpath lines above. Use a private dump so our compinit
+# does a real scan and registers ~/.zsh/completions (kubectl, helm, k9s).
+ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump"
+[[ -d ${ZSH_COMPDUMP:h} ]] || mkdir -p ${ZSH_COMPDUMP:h}
+autoload -Uz compinit && compinit -d "$ZSH_COMPDUMP"
+autoload -Uz bashcompinit && bashcompinit
+
+if [[ -f "$ZSH_PLUGIN_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh" ]]; then
+  ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+  source "$ZSH_PLUGIN_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
+fi
+[[ -f "$ZSH_PLUGIN_DIR/powerlevel10k/powerlevel10k.zsh-theme" ]] && \
+  source "$ZSH_PLUGIN_DIR/powerlevel10k/powerlevel10k.zsh-theme"
+
+# === History ===
+HISTFILE=~/.histfile
+HISTSIZE=100000
+SAVEHIST=100000
+setopt EXTENDED_HISTORY        # timestamp each entry
+setopt SHARE_HISTORY           # share history across live sessions
+setopt HIST_EXPIRE_DUPS_FIRST  # trim duplicates first when full
+setopt HIST_IGNORE_ALL_DUPS    # drop older duplicate commands
+setopt HIST_IGNORE_SPACE       # don't record commands starting with a space
+setopt HIST_FIND_NO_DUPS       # skip dupes when searching
+setopt HIST_REDUCE_BLANKS      # tidy whitespace
+setopt HIST_VERIFY             # confirm history expansions before running
+
+# === Shell options ===
+setopt AUTO_CD
+setopt AUTO_PUSHD
+setopt PUSHD_IGNORE_DUPS
+setopt PUSHD_SILENT
+setopt EXTENDED_GLOB
+setopt INTERACTIVE_COMMENTS
+setopt NO_BEEP
+bindkey -e
+
+# === Completion styling ===
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'   # case-insensitive
+zstyle ':completion:*' menu select
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*:descriptions' format '%F{yellow}%d%f'
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path "${XDG_CACHE_HOME:-$HOME/.cache}/zcompcache"
+
+# === Environment ===
+# Full locale set: perl (run by fzf's ctrl-r widget on WSL) warns if
+# LC_ALL/LANGUAGE are unset even when LANG is set.
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export LANGUAGE=en_US.UTF-8
+export EDITOR='code --wait'
+export VISUAL="$EDITOR"
+export GPG_TTY=$(tty)
+export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+export MANROFFOPT="-c"
+# export BAT_THEME="Catppuccin Mocha"   # uncomment to match your terminal theme
+export PATH="${PATH}:${HOME}/.krew/bin"
+{{ if eq .machine "wsl-work" }}
+# Corporate MITM CA bundle (wsl-work network intercepts HTTPS)
+export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+export CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
+export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+
+# URLs open in the Windows browser (corp SSO lives there); xdg-open is the
+# WSL shim installed by run_onchange_install-wsl-integration.sh.
+[[ -x /usr/local/bin/xdg-open ]] && export BROWSER=xdg-open
+
+# Container runtime (Podman)
+export KIND_EXPERIMENTAL_PROVIDER=podman
+if [[ -S "${XDG_RUNTIME_DIR:-/run/user/$UID}/podman/podman.sock" ]]; then
+  export DOCKER_HOST="unix://${XDG_RUNTIME_DIR:-/run/user/$UID}/podman/podman.sock"
+fi
+
+# Persistent ssh-agent: WSL has no launchd/systemd user agent, so bind one
+# agent to a fixed socket and let every shell reuse it. Keys land in it via
+# AddKeysToAgent in ~/.ssh/config — passphrase asked once per boot, on first use.
+export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
+ssh-add -l &>/dev/null
+if [[ $? -eq 2 ]]; then  # 2 = no agent on the socket (0 = keys, 1 = empty agent)
+  rm -f "$SSH_AUTH_SOCK"
+  (umask 077; ssh-agent -a "$SSH_AUTH_SOCK" >/dev/null)
+fi
+{{ end -}}
+
+# === Tool initialization ===
+if command -v fzf &>/dev/null; then
+  eval "$(fzf --zsh)"
+  export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border --info=inline"
+  if command -v fd &>/dev/null; then
+    export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+    export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+    export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+  fi
+  export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-range=:500 {}'"
+  export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always --level=2 {} | head -200'"
+  alias vc='fzf | xargs code'
+fi
+
+command -v zoxide &>/dev/null && eval "$(zoxide init zsh --cmd cd)"
+command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
+
+if command -v kubecolor &>/dev/null; then
+  export KUBECOLOR_OBJ_FRESH="1h"
+  (( $+_comps[kubectl] )) && compdef kubecolor=kubectl
+fi
+
+# === Completions for external tools ===
+command -v ngrok &>/dev/null && eval "$(ngrok completion)"
+command -v terraform &>/dev/null && complete -o nospace -C "$(command -v terraform)" terraform
+{{- if ne .machine "wsl-work" }}
+command -v aws_completer &>/dev/null && complete -C "$(command -v aws_completer)" aws
+{{- end }}
+
+# === Aliases ===
+# --- Modern CLI replacements ---
+alias cat='bat --style=plain --paging=never'   # no line numbers, no header
+alias catp='bat'                               # full bat: header + numbers + pager
+alias ls='eza --icons --group-directories-first'
+alias ll='eza -lah --icons --git --group-directories-first'
+alias la='eza -a --icons --group-directories-first'
+alias lt='eza --tree --level=2 --icons --group-directories-first'
+alias ltree='eza -lah --tree --level=3 --icons --group-directories-first'
+alias grep='grep --color=auto'
+
+# --- Navigation ---
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias reload='exec zsh'
+alias zshrc='${EDITOR} ~/.zshrc'
+alias path='print -l -- $path'
+
+# --- Cloud Native ---
+alias k=kubecolor
+alias h=helm
+alias kc=kubectx
+alias kcc='kubectx -c'
+alias kn=kubens
+alias knc='kubens -c'
+
+# --- Terraform ---
+alias tf=terraform
+
+# --- Git ---
+alias gs='git status -sb'
+alias gd='git diff'
+alias gl='git log --oneline --graph --decorate --all'
+alias gco='git checkout'
+alias gp='git push'
+alias gpl='git pull'
+alias lg='lazygit'
+
+{{ if eq .machine "wsl-work" -}}
+# --- wsl-work specific (Mac muscle memory + tooling) ---
+# NOTE: work-tooling alias overrides (e.g. kc/kcc) live in the private overlay's
+# local.d fragments, sourced later — they win over the shared aliases above.
+alias open='explorer.exe'                                  # open . / open file
+alias pbcopy='clip.exe'                                    # pipe into clipboard
+alias pbpaste='powershell.exe -NoProfile -Command Get-Clipboard | tr -d "\r"'
+alias localip='hostname -I | awk "{print \$1}"'
+
+# Rootful kind: in-cluster eBPF agents (Falco, Inspektor Gadget, Calico
+# dataplane) must load BPF programs in the initial user namespace — rootless
+# podman can't grant that. Rootless stays the default for everything else;
+# only kind (and the podman it shells out to) runs as root here, and the
+# kubeconfig is handed back to $USER afterwards.
+rkind() {
+  local kind_bin rc
+  kind_bin="$(mise which kind 2>/dev/null)" || { echo "rkind: kind not installed via mise" >&2; return 1; }
+  mkdir -p "$HOME/.kube"
+  sudo KIND_EXPERIMENTAL_PROVIDER=podman KUBECONFIG="$HOME/.kube/config" "$kind_bin" "$@"
+  rc=$?
+  if [[ -e "$HOME/.kube/config" ]]; then
+    sudo chown "$USER:" "$HOME/.kube/config" && chmod 600 "$HOME/.kube/config"
+  fi
+  if (( rc == 0 )) && [[ "${1:-}" == "create" ]]; then
+    local name=kind
+    local -i i
+    for (( i = 1; i <= $#; i++ )); do
+      case "${argv[i]}" in
+        --name)   name="${argv[i+1]:-kind}" ;;
+        --name=*) name="${argv[i]#--name=}" ;;
+      esac
+    done
+    rkind-fix-kubeconfig "$name"
+  fi
+  return $rc
+}
+
+# WSL mirrored networking breaks loopback DNAT to rootful containers, so the
+# 127.0.0.1:<port> endpoint kind writes into the kubeconfig times out. Point
+# kubectl at the control-plane container IP instead — kubeadm includes that
+# IP (the advertise address) in the API server cert SANs, so TLS validates.
+# rkind runs this automatically after create; re-run by hand if a WSL restart
+# hands the container a new IP. Usage: rkind-fix-kubeconfig [CLUSTER]
+rkind-fix-kubeconfig() {
+  local name="${1:-kind}" ip
+  ip="$(sudo podman inspect "${name}-control-plane" 2>/dev/null | jq -r '.[0].NetworkSettings.Networks.kind.IPAddress // empty')"
+  [[ -n "$ip" ]] || { echo "rkind-fix-kubeconfig: no IP found for ${name}-control-plane" >&2; return 1; }
+  kubectl config set-cluster "kind-${name}" --server="https://${ip}:6443"
+}
+
+# Rootless and rootful podman have separate image storage: copy a locally
+# built image across, then load it into a rootful kind cluster.
+# Usage: rkind-load-image IMAGE [--name CLUSTER]
+rkind-load-image() {
+  (( $# >= 1 )) || { echo "usage: rkind-load-image IMAGE [kind load args...]" >&2; return 1; }
+  local img=$1; shift
+  podman save "$img" | sudo podman load || return
+  rkind load docker-image "$img" "$@"
+}
+{{- else -}}
+# --- mac-personal specific ---
+alias localip='ipconfig getifaddr en0'
+{{- end }}
+
+# --- Update everything: dotfiles -> packages -> tools (same command on both machines) ---
+up() {
+  chezmoi update || return            # pull manifests first; new tools arrive here
+  # Sync the private overlay if present (work machines only): pull + re-link
+  # fragments so conf.d / gitconfig.local / ssh are current before mise reads them.
+  if [[ -d ~/.local/share/dotfiles-overlay/.git ]]; then
+    # The overlay lives on a corp-internal host. When it can't be reached — VPN
+    # down, or the corp VPN's posture/compliance check blocking corp resources until
+    # a pending OS update is installed — the pull would otherwise hang ~2min on a TCP
+    # timeout. So: skip unless the host RESOLVES, and cap the connect at 5s. Host
+    # is derived from the remote to keep this file employer-neutral.
+    local _ovhost
+    _ovhost=$(git -C ~/.local/share/dotfiles-overlay remote get-url origin 2>/dev/null \
+      | sed -E 's#^[a-z]+://##; s#^[^@]*@##; s#[:/].*##')
+    if [[ -n "$_ovhost" ]] && getent hosts "$_ovhost" &>/dev/null; then
+      GIT_SSH_COMMAND='ssh -o ConnectTimeout=5 -o BatchMode=yes' \
+        git -C ~/.local/share/dotfiles-overlay pull --rebase --autostash && \
+        ~/.local/share/dotfiles-overlay/install.sh
+    else
+      echo "up: overlay host '${_ovhost:-?}' unreachable — skipping overlay sync (VPN down or corp access blocked?)"
+    fi
+  fi
+  if command -v brew &>/dev/null; then
+    brew update && brew bundle install --global && \
+      brew upgrade && brew upgrade --cask && brew cleanup
+  else
+    mise self-update                  # only valid where mise isn't brew-managed
+  fi
+  mise install && mise upgrade && mise prune
+  echo "up: done — run 'exec zsh' if dotfiles changed"
+}
+
+# --- Network / misc ---
+alias ssh0='ssh -q -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+alias myip4='curl -s https://api4.ipify.org'
+alias myip6='curl -s https://api6.ipify.org'
+alias digmyip='dig +short myip.opendns.com @resolver1.opendns.com'
+
+# === Machine-local / overlay shell fragments ===
+# Drop-in zsh files (work aliases, functions, completions) layered in by the
+# private overlay's install.sh. Sourced here — after the core aliases/compdefs,
+# before syntax-highlighting — so fragments can extend or override them.
+# (N) null-glob: no error when the dir is empty/absent; -r skips dangling links.
+for _f in ~/.config/zsh/local.d/*.zsh(N); do [[ -r "$_f" ]] && source "$_f"; done
+unset _f
+
+# === Plugins that must load last ===
+# zsh-syntax-highlighting must be sourced AFTER all compdef/alias definitions.
+[[ -f "$ZSH_PLUGIN_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] && \
+  source "$ZSH_PLUGIN_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+
+# zsh-history-substring-search must load AFTER syntax-highlighting.
+if [[ -f "$ZSH_PLUGIN_DIR/zsh-history-substring-search/zsh-history-substring-search.zsh" ]]; then
+  source "$ZSH_PLUGIN_DIR/zsh-history-substring-search/zsh-history-substring-search.zsh"
+  bindkey '^[[A' history-substring-search-up
+  bindkey '^[[B' history-substring-search-down
+fi
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh

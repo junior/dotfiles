@@ -1,0 +1,26 @@
+{{ if eq .machine "wsl-work" -}}
+#!/bin/bash
+# WSL <-> Windows integration (wsl-work) — re-runs when this file changes.
+# Installs a minimal xdg-open that hands URLs/files to Windows default apps,
+# so CLI tools (gh/gcloud auth flows, anything calling xdg-open or $BROWSER)
+# open the already-authenticated Windows browser. wslu/wslview would do the
+# same, but the corporate apt mirror doesn't carry it — this shim needs nothing.
+set -euo pipefail
+
+echo ">>> WSL integration: installing xdg-open shim to /usr/local/bin"
+sudo tee /usr/local/bin/xdg-open >/dev/null <<'EOF'
+#!/bin/sh
+# Minimal xdg-open for WSL: open URLs/files with Windows default apps.
+target="$1"
+case "$target" in
+  http://*|https://*) ;;                                     # URLs pass through
+  *) [ -e "$target" ] && target="$(wslpath -w "$target")" ;; # files -> Windows paths
+esac
+rundll=/mnt/c/Windows/System32/rundll32.exe
+[ -x "$rundll" ] || rundll=rundll32.exe                      # fall back to interop PATH
+exec "$rundll" url.dll,FileProtocolHandler "$target"
+EOF
+sudo chmod 755 /usr/local/bin/xdg-open
+
+echo ">>> WSL integration: done"
+{{- end }}

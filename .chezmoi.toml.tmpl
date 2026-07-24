@@ -1,0 +1,7 @@
+{{- /* Prompted once per machine on `chezmoi init`; stored in ~/.config/chezmoi/chezmoi.toml.
+       Only the machine identity is needed — git name/email are set in dot_gitconfig.tmpl
+       (personal default) with the work email layered in via the private overlay. */ -}}
+{{- $machine := promptChoiceOnce . "machine" "Which machine is this" (list "mac-personal" "wsl-work") -}}
+
+[data]
+    machine = {{ $machine | quote }}

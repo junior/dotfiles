@@ -1,0 +1,29 @@
+{{ if eq .machine "wsl-work" -}}
+#!/bin/bash
+# Install the Devin CLI on a fresh wsl-work, ONLY if it isn't already present.
+# It's distributed as a curl|bash installer from cli.devin.ai (not in mise, not
+# a GitHub release), so it can't be a mise-managed tool. INSTALL-IF-ABSENT: this
+# never touches an existing devin, so `devin update` owns the version after the
+# first install. Binary lands in ~/.local/bin (already on PATH). Auth/login is a
+# one-time manual `devin` step — intentionally NOT done here.
+set -euo pipefail
+
+bin="$HOME/.local/bin/devin"
+if command -v devin >/dev/null 2>&1 || [ -x "$bin" ]; then
+  echo ">>> devin: already present — skipping (use 'devin update' to upgrade)"
+  exit 0
+fi
+
+echo ">>> devin: installing latest from cli.devin.ai ..."
+tmp="$(mktemp)"; trap 'rm -f "$tmp"' EXIT
+curl -fsSL https://cli.devin.ai/install.sh -o "$tmp"
+# stdin closed so the installer's trailing interactive `devin setup` can't block
+# chezmoi; the binary is installed before that step runs.
+bash "$tmp" </dev/null || true
+if [ -x "$bin" ]; then
+  echo ">>> devin: installed — run 'devin' once to finish auth/setup"
+else
+  echo ">>> devin: install FAILED — '$bin' not found" >&2
+  exit 1
+fi
+{{- end }}
