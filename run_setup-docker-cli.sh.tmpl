@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
 {{ if eq .machine "wsl-work" -}}
+#!/usr/bin/env bash
 # Real docker CLI against ROOTLESS PODMAN ("Option A" — one engine, no daemon):
 # the genuine docker client (mise: docker-cli) talks to podman's Docker-compatible
 # API socket, so `docker image ls` == `podman image ls`. DOCKER_HOST is exported
