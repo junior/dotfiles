@@ -10,7 +10,10 @@
 Cross-machine dotfiles managed with [chezmoi](https://www.chezmoi.io).
 One templated source, two very different machines, zero drift:
 
-- **mac-personal** — personal MacBook (Homebrew, full freedom)
+- **mac-personal** — personal MacBook (Homebrew, full freedom). This is a
+  *profile*, not a single machine: any additional mac (say, an always-on mini
+  running headless AI agents) joins with one `chezmoi init` and gets the
+  identical setup.
 - **wsl-work** — locked-down work laptop, WSL2 Ubuntu (mise, Podman, corporate network)
 
 The `.zshrc` is ~85% identical between the two; chezmoi keeps that shared core
@@ -45,6 +48,7 @@ flowchart TB
     overlay[("private overlay repo<br/>employer-specific bits")]
 
     core -->|chezmoi apply| mac
+    core -.->|"chezmoi init --apply<br/>(same mac profile)"| macN
     core -->|"chezmoi update<br/>(anonymous https)"| wsl
     overlay -->|"install.sh symlinks<br/>fragments"| includes
 
@@ -52,6 +56,8 @@ flowchart TB
         brewfile["Homebrew ← Brewfile<br/>(all CLI tools + casks)"]
         misemac["mise<br/>(language runtimes only)"]
     end
+
+    macN["🖥️ any additional mac — same profile<br/>(e.g. an always-on mini<br/>running headless AI agents)"]
 
     subgraph wsl["🐧 wsl-work — WSL2 Ubuntu"]
         misewsl["mise<br/>(languages + full CLI toolchain)"]
