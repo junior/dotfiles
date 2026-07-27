@@ -5,6 +5,8 @@
 [![Managed with chezmoi](https://img.shields.io/badge/managed%20with-chezmoi-1e63b3)](https://www.chezmoi.io)
 ![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20WSL2%20Ubuntu-4c1)
 
+![Terminal demo](.github/demo.gif)
+
 Cross-machine dotfiles managed with [chezmoi](https://www.chezmoi.io).
 One templated source, two very different machines, zero drift:
 
@@ -32,6 +34,39 @@ single-sourced and isolates the differences in clearly-labelled template blocks.
   of a 2-minute hang, and repo sync over plain HTTPS — the one protocol that
   corporate egress never mangles.
 - **Employer bits stay out** — see [the overlay pattern](#work-overlay-keeping-employer-specific-bits-private) below.
+
+## How it fits together
+
+```mermaid
+flowchart TB
+    dev(["✏️ edits (always via chezmoi edit)"]) -->|git push| core
+
+    core[("<b>this repo</b><br/>public core — source of truth")]
+    overlay[("private overlay repo<br/>employer-specific bits")]
+
+    core -->|chezmoi apply| mac
+    core -->|"chezmoi update<br/>(anonymous https)"| wsl
+    overlay -->|"install.sh symlinks<br/>fragments"| includes
+
+    subgraph mac["🍎 mac-personal — macOS"]
+        brewfile["Homebrew ← Brewfile<br/>(all CLI tools + casks)"]
+        misemac["mise<br/>(language runtimes only)"]
+    end
+
+    subgraph wsl["🐧 wsl-work — WSL2 Ubuntu"]
+        misewsl["mise<br/>(languages + full CLI toolchain)"]
+        aptpkgs["apt via run_onchange<br/>(the few non-mise bits)"]
+        docker["docker CLI + dhi/scout plugins<br/>→ rootless Podman socket"]
+        includes["native include points:<br/>mise conf.d · git include<br/>ssh config.d · zsh local.d"]
+    end
+
+    krew["krew plugins — declarative list,<br/>both machines (run_onchange)"]
+    mac -.-> krew
+    wsl -.-> krew
+```
+
+One `up` command per machine syncs everything above: core repo, overlay,
+packages, and plugins.
 
 ## What's here
 
