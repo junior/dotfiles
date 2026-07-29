@@ -10,6 +10,8 @@
 # when the release tag differs from the recorded one (.<plugin>.version sidecar
 # files); otherwise it's two cheap API calls. Network failures WARN and keep the
 # current binaries — `up` never breaks offline.
+# QUIET BY DESIGN: nothing is printed when everything is already current — only
+# actual updates and warnings produce output (like the rest of the toolchain).
 #
 # Plugins managed here (no Docker Desktop on WSL to bundle them; on the mac both
 # come with Desktop and update on its cadence):
@@ -18,9 +20,10 @@
 # The old podman-docker apt emulator shim is superseded: sudo apt-get remove podman-docker
 set -eu
 
-echo ">>> docker-on-podman: ensuring rootless podman API socket"
-systemctl --user enable --now podman.socket
-systemctl --user is-active --quiet podman.socket && echo ">>> podman.socket active"
+if ! systemctl --user is-active --quiet podman.socket; then
+  echo ">>> docker-on-podman: enabling rootless podman API socket"
+  systemctl --user enable --now podman.socket
+fi
 
 PLUGIN_DIR="$HOME/.docker/cli-plugins"
 mkdir -p "$PLUGIN_DIR"
@@ -40,7 +43,7 @@ cur="$(cat "$PLUGIN_DIR/.docker-dhi.version" 2>/dev/null || true)"
 if [ -z "$latest" ]; then
   echo ">>> WARN: cannot resolve dhictl latest (offline/rate-limit?) — keeping ${cur:-none}"
 elif [ "$latest" = "$cur" ] && [ -x "$PLUGIN_DIR/docker-dhi" ]; then
-  echo ">>> docker-dhi $cur is current"
+  :   # current — stay silent
 else
   echo ">>> docker-dhi: ${cur:-none} -> $latest"
   tmp="$(mktemp)"
@@ -61,7 +64,7 @@ cur="$(cat "$PLUGIN_DIR/.docker-scout.version" 2>/dev/null || true)"
 if [ -z "$latest" ]; then
   echo ">>> WARN: cannot resolve scout latest (offline/rate-limit?) — keeping ${cur:-none}"
 elif [ "$latest" = "$cur" ] && [ -x "$PLUGIN_DIR/docker-scout" ]; then
-  echo ">>> docker-scout $cur is current"
+  :   # current — stay silent
 else
   echo ">>> docker-scout: ${cur:-none} -> $latest"
   ver="${latest#v}"
