@@ -49,6 +49,10 @@ setopt SHARE_HISTORY           # share history across live sessions
 setopt HIST_EXPIRE_DUPS_FIRST  # trim duplicates first when full
 setopt HIST_IGNORE_ALL_DUPS    # drop older duplicate commands
 setopt HIST_IGNORE_SPACE       # don't record commands starting with a space
+# tx transfer codes are single-use — persisted entries are pure noise. Filter tx
+# calls (incl. tar-pipes into tx) from the history FILE only: they never hit disk
+# or other terminals, but stay up-arrow-able in the current session for retries.
+HISTORY_IGNORE='(tx *|*\| tx *)'
 setopt HIST_FIND_NO_DUPS       # skip dupes when searching
 setopt HIST_REDUCE_BLANKS      # tidy whitespace
 setopt HIST_VERIFY             # confirm history expansions before running
