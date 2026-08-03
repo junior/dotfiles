@@ -7,7 +7,7 @@
 # brand-new macOS SDKs (e.g. unguarded pipe2 on SDK 26.x) and need no toolchain;
 # "latest" then resolves to the newest *precompiled* release.
 python.compile = false
-# Install pipx-backend tools (ansible) via `uv tool` (uvx), not pipx: pipx's
+# Install pipx-backend tools (ansible, git-filter-repo) via `uv tool` (uvx), not pipx: pipx's
 # hand-off to uv throws a fatal uv error on this box, while `uv tool install`
 # works directly. (uvx uses the `uv` tool, already pinned in [tools] below.)
 pipx.uvx = true
@@ -38,6 +38,7 @@ eza       = "latest"
 fd        = "latest"
 fx        = "latest"
 fzf       = "latest"
+git-filter-repo = "latest"
 glab      = "latest"
 helm      = "latest"
 istioctl  = "latest"
