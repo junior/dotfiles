@@ -17,6 +17,11 @@
 # come with Desktop and update on its cadence):
 #   docker-dhi   — DHI CLI  (github.com/docker-hardened-images/dhictl, raw binary)
 #   docker-scout — Scout    (github.com/docker/scout-cli, tarball)
+#   docker-buildx — Buildx  (github.com/docker/buildx, raw binary)
+# NOTE on buildx + podman: buildx's DEFAULT "docker" driver needs the Docker
+# Engine's built-in BuildKit, which podman does not provide. Use the
+# docker-container driver instead — it runs buildkitd as a container, which
+# podman can host:  docker buildx create --driver docker-container --use
 # The old podman-docker apt emulator shim is superseded: sudo apt-get remove podman-docker
 set -eu
 
@@ -79,5 +84,26 @@ else
     echo ">>> WARN: scout download failed — keeping ${cur:-none}"
   fi
   rm -rf "$tmpd"
+fi
+
+# ---- docker-buildx (raw binary, version embedded in the asset name) ----
+latest="$(fetch_latest_tag docker/buildx || true)"
+cur="$(cat "$PLUGIN_DIR/.docker-buildx.version" 2>/dev/null || true)"
+if [ -z "$latest" ]; then
+  echo ">>> WARN: cannot resolve buildx latest (offline/rate-limit?) — keeping ${cur:-none}"
+elif [ "$latest" = "$cur" ] && [ -x "$PLUGIN_DIR/docker-buildx" ]; then
+  :   # current — stay silent
+else
+  echo ">>> docker-buildx: ${cur:-none} -> $latest"
+  tmp="$(mktemp)"
+  if curl -fsSL -o "$tmp" \
+       "https://github.com/docker/buildx/releases/download/${latest}/buildx-${latest}.linux-amd64"; then
+    install -m 0755 "$tmp" "$PLUGIN_DIR/docker-buildx"
+    printf '%s\n' "$latest" > "$PLUGIN_DIR/.docker-buildx.version"
+    echo ">>> docker-buildx $latest installed"
+  else
+    echo ">>> WARN: buildx download failed — keeping ${cur:-none}"
+  fi
+  rm -f "$tmp"
 fi
 {{ end -}}
