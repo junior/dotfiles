@@ -42,8 +42,6 @@ git-filter-repo = "latest"
 glab      = "latest"
 grpcurl   = "latest"
 helm      = "latest"
-# Not in mise's registry — ubi pulls the goreleaser assets straight from GitHub releases.
-"ubi:kubernetes-sigs/ingress2gateway" = "latest"
 istioctl  = "latest"
 jq        = "latest"
 k3d       = "latest"
@@ -62,7 +60,9 @@ uv        = "latest"
 yq        = "latest"
 zoxide    = "latest"
 
+# Not in mise's registry — the github backend pulls release assets directly.
 "github:falcosecurity/falcoctl"          = "latest"
+"github:kubernetes-sigs/ingress2gateway" = "latest"
 "github:kubeshark/kubeshark"             = "latest"
 "github:operator-framework/operator-sdk" = "latest"
 "github:projectcalico/calico"            = "latest"
