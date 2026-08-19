@@ -277,7 +277,15 @@ up() {
   else
     mise self-update                  # only valid where mise isn't brew-managed
   fi
-  mise install && mise upgrade && mise prune
+  # `mise upgrade` asks every tool for its latest version, but http:-backend tools
+  # pin an exact URL and expose no version feed — they only answer with
+  # "Error getting latest version ... no version found". Skip them; they are
+  # deliberately version-pinned and get bumped by editing their config entry.
+  local _mise_skip=() _t
+  while IFS= read -r _t; do [[ -n "$_t" ]] && _mise_skip+=(-x "$_t"); done \
+    < <(mise ls --installed --json 2>/dev/null \
+        | jq -r 'keys[]? | select(startswith("http:"))' 2>/dev/null)
+  mise install && mise upgrade "${_mise_skip[@]}" && mise prune
   echo "up: done — run 'exec zsh' if dotfiles changed"
 }
 
