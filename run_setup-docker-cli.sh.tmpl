@@ -22,6 +22,7 @@
 # Engine's built-in BuildKit, which podman does not provide. Use the
 # docker-container driver instead — it runs buildkitd as a container, which
 # podman can host:  docker buildx create --driver docker-container --use
+# Finally it wires a `corp` buildx builder that trusts the corporate CA (see below).
 # The old podman-docker apt emulator shim is superseded: sudo apt-get remove podman-docker
 set -eu
 
@@ -105,5 +106,64 @@ else
     echo ">>> WARN: buildx download failed — keeping ${cur:-none}"
   fi
   rm -f "$tmp"
+fi
+
+# ---- buildx builder that trusts the corporate CA ----
+# BuildKit runs in its OWN container with its OWN trust store, so the corp
+# TLS-inspection CA that this host trusts is invisible to it and every image pull
+# dies with "x509: certificate signed by unknown authority".
+#
+# buildx COPIES any file referenced by `ca=` in buildkitd.toml into the builder
+# container and rewrites the path to /etc/buildkit/certs/<registry>/<file>.
+# `ca=` alone is per-registry, but pointing Go's SSL_CERT_FILE at that same copy
+# makes the trust apply to EVERY registry the build touches. SSL_CERT_FILE
+# REPLACES the root set rather than adding to it, so the bundle must carry the
+# public roots too — hence system bundle + corp bundle concatenated.
+BK_DIR="$HOME/.config/buildkit"
+BK_BUNDLE="$BK_DIR/corp-ca-bundle.crt"
+BK_TOML="$BK_DIR/buildkitd.toml"
+BK_BUILDER="corp"
+SYS_CA="/etc/ssl/certs/ca-certificates.crt"
+CORP_CA_CACHE="$BK_DIR/corp-roots.crt"
+CORP_CA_URL="https://pki.dell.com/linux/dellca2018-bundle.crt"
+
+if command -v docker >/dev/null 2>&1 && [ -x "$PLUGIN_DIR/docker-buildx" ] && [ -r "$SYS_CA" ]; then
+  mkdir -p "$BK_DIR"
+
+  # Refresh the corp root bundle at most monthly (the system store already carries
+  # the inspection CA; this is belt-and-braces and must never block `up`).
+  if [ ! -s "$CORP_CA_CACHE" ] || [ -n "$(find "$CORP_CA_CACHE" -mtime +30 2>/dev/null)" ]; then
+    if ! curl -fsSL --max-time 20 -o "$CORP_CA_CACHE.tmp" "$CORP_CA_URL" 2>/dev/null; then
+      rm -f "$CORP_CA_CACHE.tmp"
+      [ -s "$CORP_CA_CACHE" ] || echo ">>> WARN: corp CA bundle unreachable — using system roots only"
+    else
+      mv "$CORP_CA_CACHE.tmp" "$CORP_CA_CACHE"
+    fi
+  fi
+
+  tmp_bundle="$(mktemp)"
+  cat "$SYS_CA" > "$tmp_bundle"
+  if [ -s "$CORP_CA_CACHE" ]; then cat "$CORP_CA_CACHE" >> "$tmp_bundle"; fi
+
+  # Recreate the builder only when the trust material or the builder itself changed.
+  new_sum="$(sha256sum "$tmp_bundle" | cut -d" " -f1)"
+  old_sum="$(cat "$BK_DIR/.bundle.sha256" 2>/dev/null || true)"
+  if [ "$new_sum" != "$old_sum" ] || ! docker buildx inspect "$BK_BUILDER" >/dev/null 2>&1; then
+    mv "$tmp_bundle" "$BK_BUNDLE"
+    printf '[registry."docker.io"]\n  ca=["%s"]\n' "$BK_BUNDLE" > "$BK_TOML"
+    echo ">>> buildx: (re)creating the '$BK_BUILDER' builder with the corporate CA"
+    docker buildx rm "$BK_BUILDER" >/dev/null 2>&1 || true
+    if docker buildx create --name "$BK_BUILDER" --driver docker-container --use \
+         --config "$BK_TOML" \
+         --driver-opt "env.SSL_CERT_FILE=/etc/buildkit/certs/docker.io/$(basename "$BK_BUNDLE")" \
+         >/dev/null 2>&1; then
+      printf '%s\n' "$new_sum" > "$BK_DIR/.bundle.sha256"
+      echo ">>> buildx: '$BK_BUILDER' ready (docker buildx build now trusts the corp CA)"
+    else
+      echo ">>> WARN: could not create the '$BK_BUILDER' buildx builder"
+    fi
+  else
+    rm -f "$tmp_bundle"   # current — stay silent
+  fi
 fi
 {{ end -}}
