@@ -119,6 +119,11 @@ fi
 # makes the trust apply to EVERY registry the build touches. SSL_CERT_FILE
 # REPLACES the root set rather than adding to it, so the bundle must carry the
 # public roots too — hence system bundle + corp bundle concatenated.
+#
+# default-load=true restores classic behaviour: the docker-container driver keeps
+# results in the build cache only, so `docker build` would leave nothing in
+# `docker image ls` and nag for --load/--push. It costs an export per build and
+# cannot apply to multi-platform builds (use --push for those).
 BK_DIR="$HOME/.config/buildkit"
 BK_BUNDLE="$BK_DIR/corp-ca-bundle.crt"
 BK_TOML="$BK_DIR/buildkitd.toml"
@@ -146,7 +151,10 @@ if command -v docker >/dev/null 2>&1 && [ -x "$PLUGIN_DIR/docker-buildx" ] && [ 
   if [ -s "$CORP_CA_CACHE" ]; then cat "$CORP_CA_CACHE" >> "$tmp_bundle"; fi
 
   # Recreate the builder only when the trust material or the builder itself changed.
-  new_sum="$(sha256sum "$tmp_bundle" | cut -d" " -f1)"
+  # Bump BK_REV whenever the builder's driver options below change — it is part of
+  # the recorded fingerprint, so the builder is recreated instead of silently stale.
+  BK_REV="r2"
+  new_sum="$(sha256sum "$tmp_bundle" | cut -d" " -f1)-$BK_REV"
   old_sum="$(cat "$BK_DIR/.bundle.sha256" 2>/dev/null || true)"
   if [ "$new_sum" != "$old_sum" ] || ! docker buildx inspect "$BK_BUILDER" >/dev/null 2>&1; then
     mv "$tmp_bundle" "$BK_BUNDLE"
@@ -156,6 +164,7 @@ if command -v docker >/dev/null 2>&1 && [ -x "$PLUGIN_DIR/docker-buildx" ] && [ 
     if docker buildx create --name "$BK_BUILDER" --driver docker-container --use \
          --config "$BK_TOML" \
          --driver-opt "env.SSL_CERT_FILE=/etc/buildkit/certs/docker.io/$(basename "$BK_BUNDLE")" \
+         --driver-opt default-load=true \
          >/dev/null 2>&1; then
       printf '%s\n' "$new_sum" > "$BK_DIR/.bundle.sha256"
       echo ">>> buildx: '$BK_BUILDER' ready (docker buildx build now trusts the corp CA)"
