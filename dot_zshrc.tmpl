@@ -105,6 +105,13 @@ export KIND_EXPERIMENTAL_PROVIDER=podman
 if [[ -S "${XDG_RUNTIME_DIR:-/run/user/$UID}/podman/podman.sock" ]]; then
   export DOCKER_HOST="unix://${XDG_RUNTIME_DIR:-/run/user/$UID}/podman/podman.sock"
 fi
+# `docker build` does NOT honour `docker buildx use` — it falls back to the
+# daemon's default builder, which carries no corporate CA (every internal
+# registry then fails "x509: certificate signed by unknown authority").
+# BUILDX_BUILDER is honoured by BOTH `docker build` and `docker buildx build`,
+# so point them at the CA-carrying builder that run_setup-docker-cli.sh creates.
+# Guarded on the instance file so a not-yet-provisioned machine still builds.
+[[ -f "$HOME/.docker/buildx/instances/corp" ]] && export BUILDX_BUILDER=corp
 
 # Persistent ssh-agent: WSL has no launchd/systemd user agent, so bind one
 # agent to a fixed socket and let every shell reuse it. Keys land in it via
