@@ -1,0 +1,31 @@
+{{ if ne .machine "wsl-work" -}}
+#!/usr/bin/env bash
+# Pin casks that keep THEMSELVES current.
+#
+# Chrome Canary rebuilds daily, so Homebrew is permanently "behind" and retries an
+# upgrade on every `up` — an upgrade that then fails, because replacing a RUNNING,
+# root-owned app bundle needs both the app closed and App Management (TCC) rights
+# the terminal usually lacks. Result: "Upgrading <cask> has failed!" forever.
+#
+# Pinning tells brew to skip them; their own updaters keep them current (brew's own
+# `pin` help says as much for auto_updates casks). They're still declared in the
+# Brewfile, so a fresh machine still installs them — Brewfile has no pin syntax,
+# which is why this lives here. Edit PINNED to add/remove; unpin by hand with
+# `brew unpin --cask <name>` after removing it from the list.
+set -eu
+
+PINNED=(google-chrome@canary)
+
+command -v brew >/dev/null 2>&1 || exit 0
+
+for c in "${PINNED[@]}"; do
+  brew list --cask "$c" >/dev/null 2>&1 || continue     # not installed (yet) — skip
+  # tolerate JSON spacing: brew emits `"pinned": true`
+  if brew info --cask --json=v2 "$c" 2>/dev/null \
+       | grep -qE '"pinned" *: *true'; then
+    continue                                            # already pinned — stay silent
+  fi
+  echo ">>> pinning self-updating cask: $c (its own updater keeps it current)"
+  brew pin --cask "$c" >/dev/null 2>&1 || echo ">>> WARN: could not pin $c"
+done
+{{ end -}}
