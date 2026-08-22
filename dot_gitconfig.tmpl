@@ -3,6 +3,13 @@
 [user]
 	name = Adao Oliveira Jr
 	email = junior@users.noreply.github.com
+{{- if ne .machine "wsl-work" }}
+	# Personal OpenPGP key — a public FINGERPRINT, safe to publish. It only says
+	# WHICH key to sign with, enabling `git commit -S` / `git tag -s` without
+	# naming it. Personal machines only — the work box commits under a
+	# different identity via ~/.gitconfig.local and never uses this key.
+	signingkey = 39A6CFBD3BD1535104068B15DEF5828DA2AE0DF2
+{{- end }}
 
 [core]
 	pager = delta
@@ -36,6 +43,13 @@
 
 # Work machines drop a ~/.gitconfig.local (from the private overlay) that
 # overrides the email above; git silently ignores a missing include.
+{{- if ne .machine "wsl-work" }}
+
+# OpenPGP (not the newer SSH signing format) — matches the signingkey above.
+[gpg]
+	format = openpgp
+{{- end }}
+
 [include]
 	path = ~/.gitconfig.local
 {{- if lookPath "git-lfs" }}
