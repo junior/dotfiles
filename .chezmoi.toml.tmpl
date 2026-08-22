@@ -5,3 +5,6 @@
 
 [data]
     machine = {{ $machine | quote }}
+    # Optional, machine-local, never tracked: uncomment on machines that sign
+    # commits and git gets `user.signingkey` + `gpg.format = openpgp` rendered.
+    # signingkey = "<your OpenPGP key fingerprint>"
