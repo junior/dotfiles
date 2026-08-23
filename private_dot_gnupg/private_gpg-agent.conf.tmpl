@@ -1,0 +1,17 @@
+# ~/.gnupg/gpg-agent.conf — managed by chezmoi (mode 0600 inside a 0700 ~/.gnupg,
+# enforced by the private_ prefixes on the source names).
+#
+# How long the agent remembers a passphrase: refreshed-on-use idle window, and a
+# hard ceiling per unlock.
+default-cache-ttl 600
+max-cache-ttl 7200
+{{- if lookPath "pinentry-mac" }}
+
+# GUI passphrase prompt. lookPath resolves this on the machine running chezmoi,
+# so the line simply disappears where pinentry-mac is not installed (and the
+# agent falls back to its default curses/tty prompt). Note GPG Suite ships its
+# own copy under /usr/local/MacGPG2/libexec — whichever path is named here wins;
+# we deliberately point at the Homebrew-managed one so it is declared, not
+# inherited. Changing this needs `gpgconf --kill gpg-agent` to take effect.
+pinentry-program {{ lookPath "pinentry-mac" }}
+{{- end }}

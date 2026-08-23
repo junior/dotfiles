@@ -3,3 +3,8 @@ LICENSE
 {{ if ne .machine "wsl-work" -}}
 .ssh/config
 {{- end }}
+{{ if eq .machine "wsl-work" -}}
+# gpg-agent.conf is tuned for the mac (GUI pinentry); the work box keeps
+# whatever gpg setup it has rather than having one imposed on it.
+.gnupg/gpg-agent.conf
+{{- end }}
