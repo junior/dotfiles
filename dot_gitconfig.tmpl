@@ -49,10 +49,15 @@
 [gpg]
 	format = openpgp
 
-# Sign every commit. Inside the same `signingkey` guard on purpose: a fork or a
-# machine without the key must never get gpgsign=true, or EVERY commit fails.
+# Sign every commit and annotated tag. Inside the same `signingkey` guard on
+# purpose: a fork or a machine without the key must never get gpgsign=true, or
+# EVERY commit fails. Repos that commit under a DIFFERENT identity (one with no
+# GPG key) must turn this off — per repo, or via an includeIf in ~/.gitconfig.local.
 [commit]
 	gpgsign = true
+
+[tag]
+	gpgSign = true
 {{- end }}
 
 [include]
