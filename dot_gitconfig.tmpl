@@ -48,6 +48,11 @@
 # OpenPGP (not the newer SSH signing format) — matches the signingkey above.
 [gpg]
 	format = openpgp
+
+# Sign every commit. Inside the same `signingkey` guard on purpose: a fork or a
+# machine without the key must never get gpgsign=true, or EVERY commit fails.
+[commit]
+	gpgsign = true
 {{- end }}
 
 [include]
