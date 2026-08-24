@@ -8,3 +8,6 @@
     # Optional, machine-local, never tracked: uncomment on machines that sign
     # commits and git gets `user.signingkey` + `gpg.format = openpgp` rendered.
     # signingkey = "<your OpenPGP key fingerprint>"
+    # Optional, machine-local: extra CA root bundle URL appended to the system
+    # roots for the buildx builder on networks that inspect TLS.
+    # corp_ca_url = "https://<your-pki-host>/roots.crt"

@@ -130,14 +130,18 @@ BK_TOML="$BK_DIR/buildkitd.toml"
 BK_BUILDER="corp"
 SYS_CA="/etc/ssl/certs/ca-certificates.crt"
 CORP_CA_CACHE="$BK_DIR/corp-roots.crt"
-CORP_CA_URL="https://pki.dell.com/linux/dellca2018-bundle.crt"
+# Optional extra root bundle, supplied per machine via the untracked chezmoi data
+# file (~/.config/chezmoi/chezmoi.toml: corp_ca_url = "https://..."). Kept out of
+# this repo so no employer URL ships in it. Unset = system roots only, which is
+# already sufficient wherever the inspection CA is installed system-wide.
+CORP_CA_URL="{{ if hasKey . "corp_ca_url" }}{{ .corp_ca_url }}{{ end }}"
 
 if command -v docker >/dev/null 2>&1 && [ -x "$PLUGIN_DIR/docker-buildx" ] && [ -r "$SYS_CA" ]; then
   mkdir -p "$BK_DIR"
 
-  # Refresh the corp root bundle at most monthly (the system store already carries
+  # Refresh the extra root bundle at most monthly (the system store already carries
   # the inspection CA; this is belt-and-braces and must never block `up`).
-  if [ ! -s "$CORP_CA_CACHE" ] || [ -n "$(find "$CORP_CA_CACHE" -mtime +30 2>/dev/null)" ]; then
+  if [ -n "$CORP_CA_URL" ] && { [ ! -s "$CORP_CA_CACHE" ] || [ -n "$(find "$CORP_CA_CACHE" -mtime +30 2>/dev/null)" ]; }; then
     if ! curl -fsSL --max-time 20 -o "$CORP_CA_CACHE.tmp" "$CORP_CA_URL" 2>/dev/null; then
       rm -f "$CORP_CA_CACHE.tmp"
       [ -s "$CORP_CA_CACHE" ] || echo ">>> WARN: corp CA bundle unreachable — using system roots only"
