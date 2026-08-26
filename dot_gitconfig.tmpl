@@ -1,14 +1,16 @@
+{{- $signingkey := "" -}}
+{{- if hasKey . "signingkey" }}{{ $signingkey = .signingkey }}{{ end -}}
 {{- /* ~/.gitconfig — managed by chezmoi. Personal identity by default; a work
        machine overrides the email via ~/.gitconfig.local (see [include] at end). */ -}}
 [user]
 	name = Adao Oliveira Jr
 	email = junior@users.noreply.github.com
-{{- if hasKey . "signingkey" }}
+{{- if $signingkey }}
 	# Signing key fingerprint comes from the machine-local chezmoi data file
 	# (~/.config/chezmoi/chezmoi.toml, never in this repo) — set `signingkey`
 	# there on machines that sign. Omitted entirely where it is not set, so a
 	# fork never inherits someone else's key.
-	signingkey = {{ .signingkey }}
+	signingkey = {{ $signingkey }}
 {{- end }}
 
 [core]
@@ -43,7 +45,7 @@
 
 # Work machines drop a ~/.gitconfig.local (from the private overlay) that
 # overrides the email above; git silently ignores a missing include.
-{{- if hasKey . "signingkey" }}
+{{- if $signingkey }}
 
 # OpenPGP (not the newer SSH signing format) — matches the signingkey above.
 [gpg]

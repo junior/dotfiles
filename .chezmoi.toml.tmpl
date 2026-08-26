@@ -1,13 +1,16 @@
 {{- /* Prompted once per machine on `chezmoi init`; stored in ~/.config/chezmoi/chezmoi.toml.
-       Only the machine identity is needed — git name/email are set in dot_gitconfig.tmpl
-       (personal default) with the work email layered in via the private overlay. */ -}}
+       Every value uses a *Once helper: an answer already present in the config is reused, so
+       re-running `chezmoi init` (e.g. after this template changes) never loses local settings.
+       Optional values may be left blank — the templates that consume them then emit nothing. */ -}}
 {{- $machine := promptChoiceOnce . "machine" "Which machine is this" (list "mac-personal" "wsl-work") -}}
+{{- $signingkey := promptStringOnce . "signingkey" "OpenPGP signing key fingerprint, blank for none" "" -}}
+{{- $corpCaURL := promptStringOnce . "corp_ca_url" "Extra CA bundle URL for TLS-inspecting networks, blank for none" "" -}}
 
 [data]
     machine = {{ $machine | quote }}
-    # Optional, machine-local, never tracked: uncomment on machines that sign
-    # commits and git gets `user.signingkey` + `gpg.format = openpgp` rendered.
-    # signingkey = "<your OpenPGP key fingerprint>"
-    # Optional, machine-local: extra CA root bundle URL appended to the system
-    # roots for the buildx builder on networks that inspect TLS.
-    # corp_ca_url = "https://<your-pki-host>/roots.crt"
+    # Blank unless this machine signs commits: enables user.signingkey, gpg.format
+    # and commit/tag signing in ~/.gitconfig.
+    signingkey = {{ $signingkey | quote }}
+    # Blank unless this machine is behind TLS inspection: extra roots appended to
+    # the system bundle for the buildx builder.
+    corp_ca_url = {{ $corpCaURL | quote }}
