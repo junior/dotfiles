@@ -3,6 +3,7 @@
 # Languages (node, python, terraform, opentofu) are managed by mise.
 
 # --- Taps ---
+tap "docker/tap"     # Docker Sandboxes (sbx)
 tap "junior/tap"
 
 # --- Formulae: shell + completions ---
@@ -131,6 +132,9 @@ cask "tower"
 
 # --- Casks: AI / misc ---
 cask "chatgpt"
+# sbx: microVM sandboxes for coding agents. Standalone — its own VM backend,
+# independent of any Docker/Podman engine. Linux needs KVM; macOS does not.
+cask "docker/tap/sbx"
 cask "chatgpt-atlas"
 cask "codex"
 cask "grammarly-desktop"
