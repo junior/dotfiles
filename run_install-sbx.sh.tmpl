@@ -1,0 +1,65 @@
+{{ if eq .machine "wsl-work" -}}
+#!/usr/bin/env bash
+# Docker Sandboxes (sbx) — microVM isolation for coding agents (Claude Code, Codex,
+# Gemini CLI, ...). STANDALONE: it ships its own kernel, rootfs and containerd shim,
+# so it neither uses nor cares about podman/dockerd. What it does need is KVM, i.e.
+# nested virtualisation inside WSL2 — this script is a silent no-op without it.
+#
+# Like the docker CLI plugins this runs on every apply, but it only touches the
+# system when upstream actually has a newer release: the version check is free, and
+# sudo is invoked ONLY for a real install (so `up` stays password-free otherwise).
+# The .deb is used rather than the tarball because it wires up the AppArmor profile
+# and system paths; the tarball's own installer needs root for that step anyway.
+set -eu
+
+[ -e /dev/kvm ] || exit 0        # no KVM in this WSL kernel — nothing to do, quietly
+
+REPO="docker/sbx-releases"
+
+cur="$(sbx version 2>/dev/null | sed -n 's/^sbx version: \(v[^ ]*\).*/\1/p' | head -1)"
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+  latest="$(curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null \
+            | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)"
+else
+  latest="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null \
+            | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)"
+fi
+
+if [ -z "$latest" ]; then
+  echo ">>> WARN: cannot resolve sbx latest (offline/rate-limit?) — keeping ${cur:-none}"
+  exit 0
+fi
+[ "$latest" = "$cur" ] && exit 0   # current — stay silent
+
+# Pick the .deb built for this Ubuntu release (fall back to the newest LTS build).
+. /etc/os-release
+case "${VERSION_ID:-}" in
+  26.04) flavour="ubuntu2604" ;;
+  24.04) flavour="ubuntu2404" ;;
+  *)     flavour="ubuntu2404" ;;
+esac
+asset="DockerSandboxes-linux-amd64-${flavour}.deb"
+
+echo ">>> sbx: ${cur:-none} -> $latest  (downloading $asset, ~100MB)"
+tmp="$(mktemp -d)"
+if ! curl -fsSL -o "$tmp/sbx.deb" \
+     "https://github.com/$REPO/releases/download/${latest}/${asset}"; then
+  echo ">>> WARN: sbx download failed — keeping ${cur:-none}"
+  rm -rf "$tmp"; exit 0
+fi
+
+echo ">>> sbx: installing (sudo required for the .deb)"
+if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$tmp/sbx.deb"; then
+  echo ">>> sbx $latest installed"
+else
+  echo ">>> WARN: sbx install failed — keeping ${cur:-none}"
+fi
+rm -rf "$tmp"
+
+# KVM access is group-based; the change only takes effect in a NEW login session.
+if ! id -nG | tr ' ' '\n' | grep -qx kvm; then
+  echo ">>> sbx: adding $USER to the kvm group (log out/in, or 'wsl --shutdown', to take effect)"
+  sudo usermod -aG kvm "$USER" || echo ">>> WARN: could not add $USER to kvm"
+fi
+{{ end -}}
