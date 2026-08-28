@@ -1,0 +1,2 @@
+# npm globals mise auto-installs with every node it installs. Intentionally empty:
+# CLIs are installed via their native/brew/mise channels, npm only as last resort.
