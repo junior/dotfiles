@@ -1,35 +1,40 @@
 {{ if eq .machine "wsl-work" -}}
 #!/usr/bin/env bash
-# Claude Code CLI (native install).
+# Claude Code CLI — npm global install (registry.npmjs.org).
 #
-# BOOTSTRAP ONLY — deliberately not mise-managed. The native install puts a
-# launcher at ~/.local/bin/claude (already on PATH) backed by
-# ~/.local/share/claude/versions/, and KEEPS ITSELF UPDATED in the background.
-# Handing it to mise as well would mean two updaters fighting over one binary,
-# the same failure mode as brew chasing self-updating casks on the mac. So this
-# runs only when the file changes and exits immediately once claude exists.
+# WHY NPM, NOT THE NATIVE INSTALLER: the corp proxy serves an HTML block page for
+# claude.ai/install.sh, and piping that into bash is how this script once printed
+# a wall of "!DOCTYPE: No such file or directory". npmjs.org is the one channel
+# already proven through this proxy (the mise npm: tools use it daily). The npm
+# package ships the same native binary via a platform optionalDependency — which
+# is also why mise's npm BACKEND cannot install it (it skips optional deps; the
+# result errors "claude native binary not installed"). Plain `npm i -g` handles it.
 #
-# No sudo, no Node (it is a native binary and bundles ripgrep). Auth is a
-# per-machine browser login: run `claude` once and follow the prompts.
-# Channel: installs `latest`; for the slower, regression-skipping channel use
-#   curl -fsSL https://claude.ai/install.sh | bash -s stable
-# or set "autoUpdatesChannel": "stable" in ~/.claude/settings.json.
+# UPDATES: an npm-installed Claude Code self-updates THROUGH npm (the global dir
+# is user-writable under mise's node), so updates work behind the proxy and there
+# is exactly one updater. ~/.default-npm-packages re-installs it automatically
+# whenever mise installs a new node, so a node lts bump cannot lose it.
+#
+# Bootstrap only: exits as soon as `claude` exists. Auth: run `claude` once.
 set -eu
 
 if command -v claude >/dev/null 2>&1; then
-  exit 0                      # already installed — it updates itself from here
+  exit 0
 fi
 
-echo ">>> claude-code: installing (native, self-updating)"
-if curl -fsSL https://claude.ai/install.sh | bash; then
-  # The installer writes to ~/.local/bin, which this shell may not have picked up yet.
-  if [ -x "$HOME/.local/bin/claude" ]; then
-    echo ">>> claude-code $("$HOME/.local/bin/claude" --version 2>/dev/null | head -1) installed — run 'claude' to log in"
+if ! command -v npm >/dev/null 2>&1; then
+  echo ">>> WARN: npm not found (mise node not active?) — skipping claude-code install"
+  exit 0
+fi
+
+echo ">>> claude-code: installing via npm (native installer is proxy-blocked here)"
+if npm install -g @anthropic-ai/claude-code; then
+  if command -v claude >/dev/null 2>&1; then
+    echo ">>> claude-code $(claude --version 2>/dev/null | head -1) — run 'claude' to log in"
   else
     echo ">>> claude-code installed — open a new shell, then run 'claude' to log in"
   fi
 else
-  echo ">>> WARN: claude-code install failed (network/proxy?) — retry later with:"
-  echo "        curl -fsSL https://claude.ai/install.sh | bash"
+  echo ">>> WARN: npm install failed — retry later with: npm install -g @anthropic-ai/claude-code"
 fi
 {{ end -}}
