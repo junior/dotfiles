@@ -1,0 +1,35 @@
+{{ if eq .machine "wsl-work" -}}
+#!/usr/bin/env bash
+# Claude Code CLI (native install).
+#
+# BOOTSTRAP ONLY — deliberately not mise-managed. The native install puts a
+# launcher at ~/.local/bin/claude (already on PATH) backed by
+# ~/.local/share/claude/versions/, and KEEPS ITSELF UPDATED in the background.
+# Handing it to mise as well would mean two updaters fighting over one binary,
+# the same failure mode as brew chasing self-updating casks on the mac. So this
+# runs only when the file changes and exits immediately once claude exists.
+#
+# No sudo, no Node (it is a native binary and bundles ripgrep). Auth is a
+# per-machine browser login: run `claude` once and follow the prompts.
+# Channel: installs `latest`; for the slower, regression-skipping channel use
+#   curl -fsSL https://claude.ai/install.sh | bash -s stable
+# or set "autoUpdatesChannel": "stable" in ~/.claude/settings.json.
+set -eu
+
+if command -v claude >/dev/null 2>&1; then
+  exit 0                      # already installed — it updates itself from here
+fi
+
+echo ">>> claude-code: installing (native, self-updating)"
+if curl -fsSL https://claude.ai/install.sh | bash; then
+  # The installer writes to ~/.local/bin, which this shell may not have picked up yet.
+  if [ -x "$HOME/.local/bin/claude" ]; then
+    echo ">>> claude-code $("$HOME/.local/bin/claude" --version 2>/dev/null | head -1) installed — run 'claude' to log in"
+  else
+    echo ">>> claude-code installed — open a new shell, then run 'claude' to log in"
+  fi
+else
+  echo ">>> WARN: claude-code install failed (network/proxy?) — retry later with:"
+  echo "        curl -fsSL https://claude.ai/install.sh | bash"
+fi
+{{ end -}}
