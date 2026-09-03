@@ -132,6 +132,16 @@ cask "tower"
 
 # --- Casks: AI / misc ---
 cask "chatgpt"
+# Claude Desktop. Self-updating, so it is pinned in run_onchange_pin-self-updating-casks.sh:
+# brew must never try to replace a running, root-owned app bundle (the Chrome lesson).
+cask "claude"
+# Claude Code CLI. Two casks exist and they conflict, so pick one: `claude-code` follows
+# the stable channel (about a week behind, skipping releases with known major regressions),
+# `claude-code@latest` takes every release. @latest matches wsl-work, whose native install
+# tracks the same channel. NOTE the difference in who updates it: a Homebrew install does
+# not self-update, so `up`'s `brew upgrade --cask` is what moves this one, while wsl-work's
+# native install updates itself in the background.
+cask "claude-code@latest"
 cask "codex"
 # sbx: microVM sandboxes for coding agents. Standalone — its own VM backend,
 # independent of any Docker/Podman engine. Linux needs KVM; macOS does not.

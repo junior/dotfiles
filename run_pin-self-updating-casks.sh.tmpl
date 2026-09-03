@@ -12,17 +12,25 @@
 # Brewfile, so a fresh machine still installs them — Brewfile has no pin syntax,
 # which is why this lives here. Edit PINNED to add/remove; unpin by hand with
 # `brew unpin --cask <name>` after removing it from the list.
+#
+# A plain run_ script, NOT run_onchange_, and that distinction is load-bearing: a
+# cask listed here may not be installed yet when this runs, because `up` applies
+# chezmoi BEFORE `brew bundle install` reaches a newly declared cask. An onchange
+# script that skipped for that reason would record itself as done and never retry,
+# leaving the cask permanently unpinned — which is how `claude` slipped through on
+# the day it was added. Running every apply costs one `brew list --pinned`.
+# QUIET BY DESIGN: it prints only when it actually pins something.
 set -eu
 
-PINNED=(google-chrome google-chrome@canary)
+PINNED=(claude google-chrome google-chrome@canary)
 
 command -v brew >/dev/null 2>&1 || exit 0
 
+already="$(brew list --pinned 2>/dev/null || true)"
+
 for c in "${PINNED[@]}"; do
-  brew list --cask "$c" >/dev/null 2>&1 || continue     # not installed (yet) — skip
-  # tolerate JSON spacing: brew emits `"pinned": true`
-  if brew info --cask --json=v2 "$c" 2>/dev/null \
-       | grep -qE '"pinned" *: *true'; then
+  brew list --cask "$c" >/dev/null 2>&1 || continue     # not installed yet — a later apply retries
+  if printf '%s\n' "$already" | grep -qx "$c"; then
     continue                                            # already pinned — stay silent
   fi
   echo ">>> pinning self-updating cask: $c (its own updater keeps it current)"
