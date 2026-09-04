@@ -76,6 +76,10 @@ packages, and plugins.
 
 ## What's here
 
+Every tool either machine installs is listed in **[TOOLS.md](TOOLS.md)** — grouped by category, one line each, with a link to its documentation. That
+file is generated from the two config files below and is never hand-edited,
+so it cannot list something that is not actually installed.
+
 | Source | Deploys to | Notes |
 |---|---|---|
 | `dot_zshrc.tmpl` | `~/.zshrc` | Shared core + per-machine blocks (pkg manager, certs, container runtime, aliases) |
@@ -93,6 +97,8 @@ packages, and plugins.
 | `run_onchange_install-wsl-integration.sh.tmpl` | — | WSL⇄Windows niceties |
 | `run_onchange_install-devin.sh.tmpl` | — | Devin CLI (WSL) |
 | `run_setup-docker-cli.sh.tmpl` | — | docker CLI against rootless Podman + self-updating `dhi`/`scout` plugins (WSL) |
+| `run_pin-self-updating-casks.sh.tmpl` | — | Pins casks that update themselves, so brew never fights their updater (mac) |
+| `gen-tools.py` | `TOOLS.md` | Regenerates the tool inventory; `--check` fails if the file is stale |
 | `.chezmoi.toml.tmpl` | chezmoi config | Prompts once for machine identity on init |
 
 ## First-time setup
@@ -119,6 +125,8 @@ then follow the same flow against your fork.
 | Pull a manual edit back into source | `chezmoi re-add ~/.p10k.zsh` |
 | Sync from the remote (other machine) | `chezmoi update` |
 | Open the source repo | `chezmoi cd` |
+| See the toolchain by category | `tools` |
+| Refresh `TOOLS.md` after adding a tool | `./gen-tools.py` (from `chezmoi cd`) |
 
 Templated files (`*.tmpl`) must be edited via `chezmoi edit` — editing the live
 file and `re-add`-ing won't work because chezmoi can't un-template. Plain files

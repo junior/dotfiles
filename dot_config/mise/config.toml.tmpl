@@ -13,9 +13,16 @@ python.compile = false
 pipx.uvx = true
 
 [tools]
+# Categories below are the `# --- ... ---` headers; gen-tools.py reads them to
+# group TOOLS.md, so a new tool belongs under one of them. The vocabulary is
+# shared with the Brewfile so both machines document alike.
+
+# --- Languages + runtimes ---
 node      = "lts"
 python    = "latest"
 terraform = "latest"
+
+# --- Containers + registries ---
 # regctl is SHARED (mac exception to the brew-first rule, agreed 2026-07-07): homebrew-core
 # has no formula and regclient's official tap is an empty stub, so a junior/tap formula
 # would mean manual version bumps forever. mise's registry auto-tracks upstream's official
@@ -24,26 +31,19 @@ regctl    = "latest"
 
 {{ if eq .machine "wsl-work" -}}
 # === wsl-work: full mise-managed toolchain (no Homebrew on this box) ===
+
+# --- Languages + runtimes ---
 go        = "latest"
-ansible   = "latest"
-bat       = "latest"
-chezmoi   = "latest"
-cosign    = "latest"
-delta     = "latest"
-direnv    = "latest"
+
+# --- Containers + registries ---
 # Real docker CLI (client only) — talks to rootless podman's Docker-compatible
 # API socket (DOCKER_HOST in .zshrc; socket enabled by run_onchange_setup-docker-cli).
 docker-cli = "latest"
-eza       = "latest"
-fd        = "latest"
-fx        = "latest"
-fzf       = "latest"
-git-filter-repo = "latest"
-glab      = "latest"
-grpcurl   = "latest"
+
+# --- Kubernetes / cloud-native ---
+cosign    = "latest"
 helm      = "latest"
 istioctl  = "latest"
-jq        = "latest"
 k3d       = "latest"
 k9s       = "latest"
 kind      = "latest"
@@ -52,25 +52,40 @@ kubectl   = "latest"
 kubectx   = "latest"
 kubens    = "latest"
 kustomize = "latest"
-lazygit   = "latest"
-lnav      = "latest"
-pipx      = "latest"
-ripgrep   = "latest"
 stern     = "latest"
-uv        = "latest"
-yq        = "latest"
-zoxide    = "latest"
-
 # Not in mise's registry — the github backend pulls release assets directly.
 "github:falcosecurity/falcoctl"          = "latest"
 "github:kubernetes-sigs/ingress2gateway" = "latest"
 "github:kubeshark/kubeshark"             = "latest"
 "github:operator-framework/operator-sdk" = "latest"
 "github:projectcalico/calico"            = "latest"
+
+# --- Dev utilities ---
+ansible   = "latest"
+bat       = "latest"
+chezmoi   = "latest"
+delta     = "latest"
+direnv    = "latest"
+eza       = "latest"
+fd        = "latest"
+fx        = "latest"
+fzf       = "latest"
+git-filter-repo = "latest"
+glab      = "latest"
+grpcurl   = "latest"
+jq        = "latest"
+lazygit   = "latest"
+lnav      = "latest"
+pipx      = "latest"
+ripgrep   = "latest"
+uv        = "latest"
+yq        = "latest"
+zoxide    = "latest"
 # skilla: mise here only — the Mac gets it from Homebrew (junior/tap/skilla).
 "github:junior/skilla" = { version = "0.3.0", exe = "skilla", matching = "skilla" }
 "npm:@vscode/vsce"                       = "latest"
 "npm:snyk"                               = "latest"
+
 # bpftool is NOT here: upstream tarballs ship the binary without an exec bit,
 # which defeats mise's bin detection — run_onchange_install-ebpf-tools.sh
 # installs it to /usr/local/bin instead (sudo-friendly for a root-only tool).
@@ -82,8 +97,11 @@ zoxide    = "latest"
 
 {{ if eq .machine "mac-personal" -}}
 # === mac-personal: opentofu + npm globals (languages above; rest via Homebrew) ===
+
+# --- Languages + runtimes ---
 opentofu = "latest"
 
+# --- Dev utilities ---
 "npm:fantasticon" = "latest"
 
 # Java/JDK lives here when needed (uncomment + adjust version):

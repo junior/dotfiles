@@ -1,5 +1,7 @@
 README.md
 LICENSE
+TOOLS.md
+gen-tools.py
 {{ if ne .machine "wsl-work" -}}
 .ssh/config
 {{- end }}

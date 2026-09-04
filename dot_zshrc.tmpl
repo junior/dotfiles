@@ -279,8 +279,18 @@ up() {
     fi
   fi
   if command -v brew &>/dev/null; then
-    brew update && brew bundle install --global && \
+    # `brew bundle` prints one "Using <x>" line per already-satisfied entry —
+    # over a hundred lines that say nothing happened. Keep everything it did do,
+    # drop the roll-call, and let the category summary below carry the shape of
+    # the toolchain instead. A failure prints the whole log untouched.
+    local _bundle=$(mktemp)
+    if brew update && brew bundle install --global >"$_bundle" 2>&1; then
+      grep -vE '^Using ' "$_bundle" || true
       brew upgrade && brew upgrade --cask && brew cleanup
+    else
+      cat "$_bundle"
+    fi
+    rm -f "$_bundle"
   else
     mise self-update                  # only valid where mise isn't brew-managed
   fi
@@ -293,7 +303,41 @@ up() {
     < <(mise ls --installed --json 2>/dev/null \
         | jq -r 'keys[]? | select(startswith("http:"))' 2>/dev/null)
   mise install && mise upgrade "${_mise_skip[@]}" && mise prune
+  tools
   echo "up: done — run 'exec zsh' if dotfiles changed"
+}
+
+# Tool inventory by category. The categories are not maintained here: they are
+# the `# --- ... ---` headers already present in ~/.Brewfile and the mise config,
+# read back at runtime, so this can never disagree with what is actually declared
+# for installation and a new category needs no change to this function. TOOLS.md
+# in the dotfiles repo is the long form, one line per tool with a link; this is
+# the count. `up` prints it; run `tools` any time to see it on its own.
+tools() {
+  local -a _cfg
+  _cfg=( ~/.Brewfile(N) ~/.config/mise/config.toml(N) )
+  (( $#_cfg )) || { echo "tools: no Brewfile or mise config found" >&2; return 1 }
+  awk '
+    FNR == 1 { cat = "" }
+    /^#[[:space:]]*---/ {
+      line = $0
+      sub(/^#[[:space:]]*---[[:space:]]*/, "", line)
+      sub(/[[:space:]]*---[[:space:]]*$/, "", line)
+      cat = line
+      if (!(cat in seen)) { seen[cat] = 1; order[++k] = cat }
+      next
+    }
+    cat == "" { next }
+    /^(brew|cask)[[:space:]]+"/ { n[cat]++; next }
+    /^"?[A-Za-z0-9_.:@\/+-]+"?[[:space:]]*=[[:space:]]*[{"]/ { n[cat]++ }
+    END {
+      for (i = 1; i <= k; i++) {
+        c = order[i]
+        if (n[c] > 0) { total += n[c]; printf "  %-38s %3d\n", c, n[c] }
+      }
+      printf "  %-38s %3d\n", "total declared", total
+    }
+  ' "${_cfg[@]}"
 }
 
 # --- Network / misc ---
