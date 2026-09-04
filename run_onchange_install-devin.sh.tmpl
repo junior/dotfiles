@@ -1,6 +1,8 @@
 {{ if eq .machine "wsl-work" -}}
 #!/bin/bash
 # Install the Devin CLI on a fresh wsl-work, ONLY if it isn't already present.
+# tools-category: AI / agents
+# tools-installs: devin
 # It's distributed as a curl|bash installer from cli.devin.ai (not in mise, not
 # a GitHub release), so it can't be a mise-managed tool. INSTALL-IF-ABSENT: this
 # never touches an existing devin, so `devin update` owns the version after the

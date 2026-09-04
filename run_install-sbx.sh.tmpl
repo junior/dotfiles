@@ -1,5 +1,7 @@
 {{ if eq .machine "wsl-work" -}}
 #!/usr/bin/env bash
+# tools-category: AI / agents
+# tools-installs: sbx
 # Docker Sandboxes (sbx) — microVM isolation for coding agents (Claude Code, Codex,
 # Gemini CLI, ...). STANDALONE: it ships its own kernel, rootfs and containerd shim,
 # so it neither uses nor cares about podman/dockerd. What it does need is KVM, i.e.

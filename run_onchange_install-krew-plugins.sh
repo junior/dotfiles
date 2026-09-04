@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Declarative krew (kubectl plugin manager) plugins — ALL machines.
+# tools-category: kubectl plugins (krew)
+# tools-installs-array: PLUGINS
 # chezmoi re-runs this whenever this file changes (edit PLUGINS to add/remove).
 #
 # The krew binary itself: macOS comes from the Brewfile (brew "krew"); Linux/WSL

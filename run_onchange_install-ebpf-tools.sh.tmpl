@@ -1,6 +1,8 @@
 {{ if eq .machine "wsl-work" -}}
 #!/bin/bash
 # eBPF host tooling (wsl-work) — re-runs whenever this script's content changes.
+# tools-category: System / observability
+# tools-installs: bpftool
 # bpftool intentionally NOT from apt: Ubuntu ties it to linux-tools-$(uname -r),
 # which never matches the Microsoft WSL2 kernel — it comes via mise (ubi backend).
 set -euo pipefail

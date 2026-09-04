@@ -311,8 +311,9 @@ up() {
 # the `# --- ... ---` headers already present in ~/.Brewfile and the mise config,
 # read back at runtime, so this can never disagree with what is actually declared
 # for installation and a new category needs no change to this function. TOOLS.md
-# in the dotfiles repo is the long form, one line per tool with a link; this is
-# the count. `up` prints it; run `tools` any time to see it on its own.
+# in the dotfiles repo is the long form — one line per tool with a link, and it
+# also covers what the run_ installer scripts add, which these two files cannot
+# know about. `up` prints this; run `tools` any time to see it on its own.
 tools() {
   local -a _cfg
   _cfg=( ~/.Brewfile(N) ~/.config/mise/config.toml(N) )
@@ -335,9 +336,10 @@ tools() {
         c = order[i]
         if (n[c] > 0) { total += n[c]; printf "  %-38s %3d\n", c, n[c] }
       }
-      printf "  %-38s %3d\n", "total declared", total
+      printf "  %-38s %3d\n", "total (brew/mise)", total
     }
   ' "${_cfg[@]}"
+  echo "  + whatever the run_ installers add on this machine — see TOOLS.md"
 }
 
 # --- Network / misc ---

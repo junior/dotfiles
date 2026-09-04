@@ -7,7 +7,7 @@ Descriptions come from Homebrew's package metadata.
 
 ## mac-personal
 
-Homebrew from `dot_Brewfile.tmpl`, plus the handful of tools mise owns on this machine (languages and npm globals).
+Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (languages and npm globals), and anything the `run_` installer scripts put on this machine.
 
 ### Formulae: shell + completions
 
@@ -205,9 +205,19 @@ Homebrew from `dot_Brewfile.tmpl`, plus the handful of tools mise owns on this m
 | --- | --- |
 | [fantasticon](https://github.com/tancredi/fantasticon) | Generate an icon font from a directory of SVG files |
 
+### kubectl plugins (krew)
+
+| Tool | What it is |
+| --- | --- |
+| [access-matrix](https://krew.sigs.k8s.io/plugins/) | Show an RBAC access matrix for server resources |
+| [cert-manager](https://krew.sigs.k8s.io/plugins/) | Manage cert-manager resources from kubectl |
+| [deprecations](https://krew.sigs.k8s.io/plugins/) | Flag deprecated and removed Kubernetes APIs in a cluster |
+| [gadget](https://krew.sigs.k8s.io/plugins/) | Inspektor Gadget — eBPF tooling for inspecting workloads |
+| [grep](https://krew.sigs.k8s.io/plugins/) | Filter Kubernetes resources by matching their names |
+
 ## wsl-work
 
-mise from `dot_config/mise/config.toml.tmpl` — no Homebrew on this box. Entries above the machine blocks are installed on both.
+mise from `dot_config/mise/config.toml.tmpl` — no Homebrew on this box — plus the `run_` installer scripts for what mise cannot carry. Entries above the machine blocks are installed on both.
 
 ### Languages + runtimes
 
@@ -224,6 +234,9 @@ mise from `dot_config/mise/config.toml.tmpl` — no Homebrew on this box. Entrie
 | --- | --- |
 | [regctl](https://github.com/regclient/regclient) | Registry client for OCI images and artifacts, no daemon needed |
 | [docker-cli](https://github.com/docker/cli) | The Docker command-line client on its own, without the engine |
+| [docker-buildx](https://docs.docker.com/buildx/working-with-buildx/) | Docker CLI plugin for extended build capabilities with BuildKit |
+| [docker-scout](https://github.com/docker/scout-cli) | Analyse images for known vulnerabilities and policy compliance |
+| [dhi](https://github.com/docker-hardened-images/dhictl) | Docker Hardened Images CLI |
 
 ### Kubernetes / cloud-native
 
@@ -274,3 +287,33 @@ mise from `dot_config/mise/config.toml.tmpl` — no Homebrew on this box. Entrie
 | [skilla](https://junior.github.io/skilla) | Install Agent Skills and Agent Plugins from git repos — bash, no Node |
 | [vsce](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#vsce) | Tool for packaging, publishing and managing VS Code extensions |
 | [snyk](https://snyk.io/) | Scan dependencies, containers and IaC for known vulnerabilities |
+
+### AI / agents
+
+| Tool | What it is |
+| --- | --- |
+| [sbx](https://github.com/docker/sbx-releases) | Build, run, and govern agents across the software development lifecycle |
+| [claude-code](https://claude.com/product/claude-code) | Terminal-based AI coding assistant |
+| [devin](https://docs.devin.ai/) | Cognition's software agent, driven from the terminal |
+
+### System packages (apt)
+
+| Tool | What it is |
+| --- | --- |
+| [zip](https://infozip.sourceforge.net/Zip.html) | Compression and file packaging/archive utility |
+
+### System / observability
+
+| Tool | What it is |
+| --- | --- |
+| [bpftool](https://github.com/libbpf/bpftool) | Inspect and manipulate eBPF programs and maps |
+
+### kubectl plugins (krew)
+
+| Tool | What it is |
+| --- | --- |
+| [access-matrix](https://krew.sigs.k8s.io/plugins/) | Show an RBAC access matrix for server resources |
+| [cert-manager](https://krew.sigs.k8s.io/plugins/) | Manage cert-manager resources from kubectl |
+| [deprecations](https://krew.sigs.k8s.io/plugins/) | Flag deprecated and removed Kubernetes APIs in a cluster |
+| [gadget](https://krew.sigs.k8s.io/plugins/) | Inspektor Gadget — eBPF tooling for inspecting workloads |
+| [grep](https://krew.sigs.k8s.io/plugins/) | Filter Kubernetes resources by matching their names |

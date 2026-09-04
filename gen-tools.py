@@ -46,6 +46,47 @@ def parse(text, pattern):
     return found
 
 
+def script_tools(machine):
+    """Tools installed by the run_ scripts rather than by brew or mise.
+
+    Each installer declares what it puts on the box with `# tools-category:` and
+    either `# tools-installs:` or `# tools-installs-array: <shell array>`, the
+    latter parsed from the script's own list so it cannot fall out of step. A
+    script that renders empty for this machine does not run there, which is how
+    per-machine attribution is decided — the same `.machine` guards chezmoi uses.
+    """
+    found = []
+    for fn in sorted(os.listdir(SRC)):
+        if not fn.startswith("run_"):
+            continue
+        text = render(fn, machine)
+        if not text.strip():
+            continue
+        cat = None
+        for line in text.splitlines():
+            m = re.match(r"#\s*tools-category:\s*(.+?)\s*$", line)
+            if m:
+                cat = m.group(1)
+            m = re.match(r"#\s*tools-installs:\s*(.+?)\s*$", line)
+            if m and cat:
+                found += [(cat, n) for n in m.group(1).split()]
+            m = re.match(r"#\s*tools-installs-array:\s*(\w+)\s*$", line)
+            if m and cat:
+                found += [(cat, n) for n in shell_array(text, m.group(1))]
+    return found
+
+
+def shell_array(text, name):
+    """Extract the words of a `name=( ... )` shell array, ignoring comments."""
+    m = re.search(rf"^{name}=\((.*?)\)", text, re.S | re.M)
+    if not m:
+        return []
+    words = []
+    for line in m.group(1).splitlines():
+        words += line.split("#", 1)[0].split()
+    return words
+
+
 def brew_meta():
     """name -> (desc, homepage) for every formula and cask Homebrew knows."""
     meta, alias = {}, {}
@@ -73,16 +114,32 @@ def core_names():
     return set(open(p).read().split()) if os.path.exists(p) else set()
 
 
-def fetch_core(names):
-    """Descriptions for formulae that are not installed locally."""
+def cask_names():
+    p = os.path.join(CACHE, "cask_names.txt")
+    return set(open(p).read().split()) if os.path.exists(p) else set()
+
+
+def fetch_core(formulae, casks):
+    """Descriptions for packages Homebrew knows but this machine has not installed.
+
+    Formulae and casks are queried separately: `brew info --formula` fails for the
+    whole batch if one name is a cask, which would silently lose the descriptions
+    of everything alongside it. Casks are included so a tool installed here by
+    another route — the native Claude Code installer on WSL, say — is still
+    described by Homebrew rather than by hand.
+    """
     out = {}
-    for chunk in [names[i:i + 25] for i in range(0, len(names), 25)]:
-        r = subprocess.run(["brew", "info", "--json=v2", "--formula", *chunk],
-                           capture_output=True, text=True)
-        if r.returncode:
-            continue
-        for f in json.loads(r.stdout)["formulae"]:
-            out[f["name"]] = (f.get("desc"), f.get("homepage"))
+    for kind, key, names in (("--formula", "formulae", formulae),
+                             ("--cask", "casks", casks)):
+        for chunk in [names[i:i + 25] for i in range(0, len(names), 25)]:
+            r = subprocess.run(["brew", "info", "--json=v2", kind, *chunk],
+                               capture_output=True, text=True)
+            if r.returncode:
+                continue
+            for e in json.loads(r.stdout)[key]:
+                name = e["name"] if kind == "--formula" else e["token"]
+                if e.get("desc"):
+                    out[name] = (e["desc"], e.get("homepage"))
     return out
 
 
@@ -131,6 +188,24 @@ OVERRIDES = {
                    "https://github.com/projectcalico/calico"),
     "fantasticon": ("Generate an icon font from a directory of SVG files",
                     "https://github.com/tancredi/fantasticon"),
+    "devin":      ("Cognition's software agent, driven from the terminal",
+                   "https://docs.devin.ai/"),
+    "bpftool":    ("Inspect and manipulate eBPF programs and maps",
+                   "https://github.com/libbpf/bpftool"),
+    "docker-scout": ("Analyse images for known vulnerabilities and policy compliance",
+                     "https://github.com/docker/scout-cli"),
+    "dhi":        ("Docker Hardened Images CLI",
+                   "https://github.com/docker-hardened-images/dhictl"),
+    "access-matrix": ("Show an RBAC access matrix for server resources",
+                      "https://krew.sigs.k8s.io/plugins/"),
+    "cert-manager": ("Manage cert-manager resources from kubectl",
+                     "https://krew.sigs.k8s.io/plugins/"),
+    "deprecations": ("Flag deprecated and removed Kubernetes APIs in a cluster",
+                     "https://krew.sigs.k8s.io/plugins/"),
+    "gadget":     ("Inspektor Gadget — eBPF tooling for inspecting workloads",
+                   "https://krew.sigs.k8s.io/plugins/"),
+    "grep":       ("Filter Kubernetes resources by matching their names",
+                   "https://krew.sigs.k8s.io/plugins/"),
     "snyk":       ("Scan dependencies, containers and IaC for known vulnerabilities",
                    "https://snyk.io/"),
 }
@@ -169,6 +244,8 @@ def main():
                      r'(?:brew|cask)\s+"([^"]+)"')
     mise_mac = parse(render("dot_config/mise/config.toml.tmpl", "mac-personal"), MISE)
     mise_wsl = parse(render("dot_config/mise/config.toml.tmpl", "wsl-work"), MISE)
+    scripts_mac = script_tools("mac-personal")
+    scripts_wsl = script_tools("wsl-work")
 
     def group(*sources):
         """[(category, [keys])] merged across sources, first-seen order."""
@@ -185,10 +262,10 @@ def main():
         return [(c, byname[c]) for c in order]
 
     # One batched lookup for anything not installed on this machine.
-    wanted = [split_key(n)[0] for _, n in brewfile + mise_wsl + mise_mac]
-    missing = sorted({alias.get(n, n) for n in wanted
-                      if alias.get(n, n) not in meta and alias.get(n, n) in core})
-    extra = fetch_core(missing) if missing else {}
+    wanted = [split_key(n)[0] for _, n in
+              brewfile + mise_wsl + mise_mac + scripts_mac + scripts_wsl]
+    unknown = {alias.get(n, n) for n in wanted if alias.get(n, n) not in meta}
+    extra = fetch_core(sorted(unknown & core), sorted(unknown & cask_names()))
 
     lines = [
         "# Installed tools",
@@ -210,12 +287,14 @@ def main():
                 lines.append(f"| {label} | {desc or '—'} |")
             lines.append("")
 
-    section("mac-personal", group(brewfile, mise_mac),
-            "Homebrew from `dot_Brewfile.tmpl`, plus the handful of tools mise "
-            "owns on this machine (languages and npm globals).")
-    section("wsl-work", group(mise_wsl),
+    section("mac-personal", group(brewfile, mise_mac, scripts_mac),
+            "Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns "
+            "here (languages and npm globals), and anything the `run_` installer "
+            "scripts put on this machine.")
+    section("wsl-work", group(mise_wsl, scripts_wsl),
             "mise from `dot_config/mise/config.toml.tmpl` — no Homebrew on this "
-            "box. Entries above the machine blocks are installed on both.")
+            "box — plus the `run_` installer scripts for what mise cannot carry. "
+            "Entries above the machine blocks are installed on both.")
 
     out = "\n".join(lines).rstrip() + "\n"
     path = os.path.join(SRC, "TOOLS.md")
@@ -226,8 +305,9 @@ def main():
         print("TOOLS.md is current")
         return
     open(path, "w").write(out)
-    print(f"TOOLS.md written: {len(brewfile) + len(mise_mac)} mac, "
-          f"{len(mise_wsl)} wsl")
+    print(f"TOOLS.md written: {len(brewfile) + len(mise_mac) + len(scripts_mac)} mac, "
+          f"{len(mise_wsl) + len(scripts_wsl)} wsl "
+          f"(scripts contributed {len(scripts_mac)} + {len(scripts_wsl)})")
 
 
 if __name__ == "__main__":
