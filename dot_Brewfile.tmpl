@@ -102,6 +102,12 @@ cask "google-chrome"
 cask "google-chrome@canary"   # renamed upstream from google-chrome-canary (old name 404s)
 cask "tor-browser"
 
+# --- Casks: network ---
+# wifiman installs via pkg (one sudo prompt the first time); wireshark-app is the
+# GUI (the `wireshark` formula is the CLI-only build) and ships a ChmodBPF pkg.
+cask "wifiman"
+cask "wireshark-app"
+
 # --- Casks: containers + Kubernetes UIs ---
 cask "docker-desktop"
 cask "freelens"
@@ -109,6 +115,8 @@ cask "openlens"
 cask "stratoshark"
 
 # --- Casks: communication + productivity ---
+# 1Password: the direct-download build (not the App Store one), adopted in place.
+cask "1password"
 cask "discord"
 cask "microsoft-teams"
 cask "notion"
@@ -117,6 +125,10 @@ cask "zoom"
 
 # --- Casks: dev tools / API ---
 cask "apidog"
+# ForkLift (licensed; the licence lives in ~/Library, the cask only owns the bundle)
+# and Monokle were hand-installed before; managed from here on.
+cask "forklift"
+cask "monokle"
 cask "dash"
 cask "drawio"
 cask "github"
@@ -144,13 +156,18 @@ cask "claude"
 # native install updates itself in the background.
 cask "claude-code@latest"
 cask "codex"
+cask "grammarly-desktop"
+cask "licecap"
+cask "microsoft-auto-update"
+{{- if eq .chezmoi.arch "arm64" }}
+# Apple-silicon-only casks (their upstream ships no Intel build), gated on the
+# architecture rather than the machine name so an Intel Mac can share this
+# profile without `brew bundle` failing on them every `up`.
 # sbx: microVM sandboxes for coding agents. Standalone — its own VM backend,
 # independent of any Docker/Podman engine. Linux needs KVM; macOS does not.
 cask "docker/tap/sbx"
-cask "grammarly-desktop"
-cask "licecap"
 cask "lm-studio"
-cask "microsoft-auto-update"
+{{- end }}
 
 # --- Casks: fonts ---
 cask "font-meslo-lg-nerd-font"
