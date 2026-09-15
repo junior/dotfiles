@@ -1,0 +1,98 @@
+{{- if eq .machine "linux-minimal" -}}
+{{- /* tmux changed its syntax at 2.1 (mouse), 2.4 (copy-mode-vi bindings) and 2.9
+       (the -style options). Distros on these hosts range from tmux 2.7 on an
+       enterprise LTS to 3.x elsewhere, so detect what is actually installed at
+       apply time instead of writing a config that only parses on one of them.
+       No tmux found means a future install, so assume a current release. */ -}}
+{{- $maj := 3 -}}{{- $min := 0 -}}
+{{- if lookPath "tmux" -}}
+{{-   $v := regexReplaceAll "[^0-9.]" "" (replace "tmux " "" (trim (output "tmux" "-V"))) -}}
+{{-   $parts := splitList "." $v -}}
+{{-   if ge (len $parts) 1 }}{{ $maj = atoi (index $parts 0) }}{{ end -}}
+{{-   if ge (len $parts) 2 }}{{ $min = atoi (index $parts 1) }}{{ end -}}
+{{- end -}}
+{{- $ge21 := or (gt $maj 2) (and (eq $maj 2) (ge $min 1)) -}}
+{{- $ge24 := or (gt $maj 2) (and (eq $maj 2) (ge $min 4)) -}}
+{{- $ge29 := or (gt $maj 2) (and (eq $maj 2) (ge $min 9)) -}}
+# ~/.tmux.conf — managed by chezmoi (machine = linux-minimal).
+# Written for the tmux found at apply time: {{ $maj }}.{{ $min }}. Reload with prefix + r.
+# Scrollback: wheel, or Shift-PageUp; q leaves copy mode. To use the terminal's
+# own selection while mouse mode is on, hold Shift and drag.
+
+set -g history-limit 50000
+set -g base-index 1
+setw -g pane-base-index 1
+set -g renumber-windows on
+setw -g mode-keys vi
+set -g status-keys emacs
+set -g display-time 2000
+setw -g automatic-rename on
+
+# escape-time is how long tmux waits after an ESC byte for the rest of a sequence.
+# Set it too low and a terminal reply that arrives fragmented over a slow link is
+# mistaken for a bare Escape plus typed characters, which puts the terminal's
+# Device Attributes answer on your command line as "[?61;4;6;..c". 500 is the
+# default and is safe over ssh. Lower it only on a local machine.
+set -sg escape-time 500
+
+# tmux-256color is the better entry but is missing on some older distros.
+if-shell 'infocmp tmux-256color >/dev/null 2>&1' \
+  'set -g default-terminal "tmux-256color"' \
+  'set -g default-terminal "screen-256color"'
+
+# --- mouse ---
+{{ if $ge21 -}}
+set -g mouse on
+{{- else -}}
+setw -g mode-mouse on
+set -g mouse-select-pane on
+set -g mouse-select-window on
+set -g mouse-resize-pane on
+{{- end }}
+
+# --- scrollback from the keyboard ---
+bind -n S-PPage copy-mode -u
+
+# --- copy out to the clipboard of the machine you are sitting at, over OSC 52 ---
+set -g set-clipboard on
+set -ga terminal-overrides ',*:Ms=\E]52;%p1%s;%p2%s\007'
+{{ if $ge24 -}}
+bind -T copy-mode-vi v send -X begin-selection
+bind -T copy-mode-vi y send -X copy-selection-and-cancel
+bind -T copy-mode-vi MouseDragEnd1Pane send -X copy-selection-and-cancel
+bind -T copy-mode-vi S-PPage send -X page-up
+bind -T copy-mode-vi S-NPage send -X page-down
+{{- else -}}
+bind -t vi-copy v begin-selection
+bind -t vi-copy y copy-selection
+{{- end }}
+
+# --- status line ---
+{{ if $ge29 -}}
+set -g status-style 'bg=colour236,fg=colour250'
+set -g message-style 'bg=colour24,fg=colour255'
+setw -g window-status-current-style 'bg=colour24,fg=colour255,bold'
+set -g pane-active-border-style 'fg=colour24'
+set -g pane-border-style 'fg=colour238'
+{{- else -}}
+set -g status-bg colour236
+set -g status-fg colour250
+setw -g window-status-current-bg colour24
+setw -g window-status-current-fg colour255
+set -g pane-active-border-fg colour24
+{{- end }}
+set -g status-left ' #[bold]#S#[default] '
+set -g status-left-length 24
+set -g status-right '#[fg=colour245]#(whoami)@#h  #[fg=colour252]%H:%M '
+setw -g window-status-format ' #I:#W '
+setw -g window-status-current-format ' #I:#W '
+
+# --- keys ---
+bind r source-file ~/.tmux.conf \; display 'tmux.conf reloaded'
+bind | split-window -h
+bind - split-window -v
+bind h select-pane -L
+bind j select-pane -D
+bind k select-pane -U
+bind l select-pane -R
+{{- end -}}

@@ -1,0 +1,8 @@
+{{- if eq .machine "linux-minimal" -}}
+# ~/.bash_profile — managed by chezmoi (machine = linux-minimal).
+# Login shells read this file, not ~/.bashrc, so it has to pull that in. This
+# replaces the stock distro file, which did the same two things.
+[ -r "$HOME/.bashrc" ] && . "$HOME/.bashrc"
+case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) PATH="$HOME/.local/bin:$PATH" ;; esac
+export PATH
+{{- end -}}

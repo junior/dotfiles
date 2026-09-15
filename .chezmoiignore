@@ -2,6 +2,7 @@ README.md
 LICENSE
 TOOLS.md
 gen-tools.py
+bootstrap.sh
 {{ if ne .machine "wsl-work" -}}
 .ssh/config
 {{- end }}
@@ -9,4 +10,26 @@ gen-tools.py
 # gpg-agent.conf is tuned for the mac (GUI pinentry); the work box keeps
 # whatever gpg setup it has rather than having one imposed on it.
 .gnupg/gpg-agent.conf
+{{- end }}
+{{ if ne .machine "linux-minimal" -}}
+# The bash-first profile. mac-personal and wsl-work run zsh and keep whatever
+# bashrc their distro shipped, so none of this is applied there.
+.bashrc
+.bash_profile
+.inputrc
+.vimrc
+.tmux.conf
+.config/bash
+.local/bin/oscopy
+.local/bin/tmux-tidy
+{{- end }}
+{{ if eq .machine "linux-minimal" -}}
+# No zsh to configure, no Homebrew, no GUI, no container runtime on these hosts.
+.zshrc
+.p10k.zsh
+.Brewfile
+.default-npm-packages
+.default-python-packages
+.gnupg
+.config/kind
 {{- end }}

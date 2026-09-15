@@ -1,0 +1,88 @@
+{{- if eq .machine "linux-minimal" -}}
+#!/bin/sh
+# tools-category: Tool manager
+# tools-installs: mise
+# Install mise into ~/.local/bin, checksum-verified, then install whatever
+# ~/.config/mise/config.toml asks for. No root, no package manager, nothing
+# piped into a shell. Re-runs when the pinned version below changes.
+#
+# mise version: {{ $miseVersion := "v2026.9.9" }}{{ $miseVersion }}
+set -eu
+
+PINNED={{ $miseVersion | quote }}
+{{ if and (hasKey . "bigdisk") .bigdisk -}}
+# ~130 MB of binary: keep it off a small home, with a link from ~/.local/bin so
+# it stays on PATH. chezmoi does not manage either path, so the link survives.
+REAL="{{ .bigdisk }}/bin/mise"
+BIN="$HOME/.local/bin/mise"
+mkdir -p "{{ .bigdisk }}/bin" "$HOME/.local/bin"
+{{- else }}
+REAL="$HOME/.local/bin/mise"
+BIN="$REAL"
+mkdir -p "$HOME/.local/bin"
+{{- end }}
+
+case "$(uname -m)" in
+  x86_64|amd64)  ARCH=x64 ;;
+  aarch64|arm64) ARCH=arm64 ;;
+  *) echo ">>> mise: unsupported architecture $(uname -m), skipping"; exit 0 ;;
+esac
+[ "$(uname -s)" = Linux ] || { echo ">>> mise: this installer is Linux-only, skipping"; exit 0; }
+command -v curl >/dev/null 2>&1 || { echo ">>> mise: curl missing, skipping"; exit 0; }
+
+have=""
+[ -f "$REAL" ] && have="v$("$REAL" --version 2>/dev/null | awk '{print $1}')"
+if [ "$have" = "$PINNED" ]; then
+  :                                        # already current, say nothing
+else
+  echo ">>> mise: ${have:-none} -> $PINNED"
+  ASSET="mise-$PINNED-linux-$ARCH.tar.gz"
+  BASE="https://github.com/jdx/mise/releases/download/$PINNED"
+  tmp=$(mktemp -d) || exit 0
+  trap 'rm -rf "$tmp"' EXIT INT TERM
+  if ! curl -fsSL --connect-timeout 10 --max-time 300 -o "$tmp/$ASSET" "$BASE/$ASSET" \
+     || ! curl -fsSL --connect-timeout 10 --max-time 60 -o "$tmp/SUMS" "$BASE/SHASUMS256.txt"; then
+    echo ">>> WARN: mise download failed, keeping ${have:-none}"; exit 0
+  fi
+  want=$(tr -d '\r' < "$tmp/SUMS" | while read -r h f _r; do
+    [ "${f##*/}" = "$ASSET" ] && { printf '%s' "$h"; break; }
+  done)
+  if command -v sha256sum >/dev/null 2>&1; then got=$(sha256sum "$tmp/$ASSET" | cut -d' ' -f1)
+  else got=$(openssl dgst -sha256 "$tmp/$ASSET" | sed 's/.*= *//'); fi
+  if [ -z "$want" ] || [ "$want" != "$got" ]; then
+    echo ">>> WARN: mise checksum mismatch or missing, refusing to install"; exit 0
+  fi
+  tar xzf "$tmp/$ASSET" -C "$tmp"
+  # -f, never -x: on a noexec filesystem the kernel fails the executable test
+  # even for a 0755 file, and /tmp is mounted noexec on hardened hosts.
+  [ -f "$tmp/mise/bin/mise" ] || { echo ">>> WARN: unexpected mise archive layout"; exit 0; }
+  cp "$tmp/mise/bin/mise" "$REAL.new" && chmod 755 "$REAL.new" && mv -f "$REAL.new" "$REAL"
+  [ "$BIN" = "$REAL" ] || ln -sfn "$REAL" "$BIN"
+  "$BIN" --version >/dev/null 2>&1 || { echo ">>> WARN: mise installed but will not run"; exit 0; }
+  echo ">>> mise $PINNED installed"
+fi
+
+# Install whatever the mise config asks for. Quiet when everything is present.
+if [ -r "$HOME/.config/mise/config.toml" ]; then
+  "$BIN" install -y >/dev/null 2>&1 || echo ">>> WARN: some mise tools failed to install (run 'mise install' to see why)"
+  "$BIN" reshim >/dev/null 2>&1 || true
+fi
+
+# Bash completions. These hosts have no bash-completion package and no way to
+# install one, so generate a file per tool from the tool itself; ~/.bashrc loads
+# each on the first TAB. Covers what mise installed AND what the host provides.
+COMPDIR="$HOME/.local/share/bash-completion/completions"
+mkdir -p "$COMPDIR"
+PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+made=""
+for t in mise kubectl oc helm k9s stern kustomize kubectx kubens argocd flux velero; do
+  command -v "$t" >/dev/null 2>&1 || continue
+  if "$t" completion bash >"$COMPDIR/.$t.tmp" 2>/dev/null && [ -s "$COMPDIR/.$t.tmp" ]; then
+    mv -f "$COMPDIR/.$t.tmp" "$COMPDIR/$t"; made="$made $t"
+  else
+    rm -f "$COMPDIR/.$t.tmp"
+  fi
+done
+[ -n "$made" ] && echo ">>> completions:$made"
+exit 0
+{{- end -}}

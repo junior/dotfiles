@@ -1,0 +1,21 @@
+#!/bin/sh
+# tmux-tidy — show, and with -f kill, the tmux sessions you are not attached to.
+# Never touches the session you are in. Managed by chezmoi.
+set -eu
+force=0
+[ "${1:-}" = "-f" ] && force=1
+command -v tmux >/dev/null 2>&1 || { echo "tmux-tidy: no tmux here" >&2; exit 1; }
+keep=""
+[ -n "${TMUX:-}" ] && keep=$(tmux display-message -p '#S' 2>/dev/null || true)
+printf 'sessions:\n'
+tmux list-sessions -F '  #{session_name}  windows=#{session_windows}  attached=#{session_attached}' 2>/dev/null || {
+  echo "  (no server running)"; exit 0; }
+strays=$(tmux list-sessions -F '#{session_attached} #{session_name}' 2>/dev/null | awk '$1==0{print $2}' | grep -vx "${keep:-__none__}" || true)
+if [ -z "$strays" ]; then printf '\nnothing unattached to clean up.\n'; exit 0; fi
+printf '\nunattached%s:\n' "${keep:+ (keeping $keep)}"
+printf '%s\n' "$strays" | sed 's/^/  /'
+if [ "$force" = 1 ]; then
+  printf '%s\n' "$strays" | while read -r s; do [ -n "$s" ] && tmux kill-session -t "$s" && echo "killed $s"; done
+else
+  printf '\nrun  tmux-tidy -f  to kill those. Attach instead with: tmux attach -t NAME\n'
+fi

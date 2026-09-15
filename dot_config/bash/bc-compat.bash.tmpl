@@ -1,0 +1,34 @@
+{{- if eq .machine "linux-minimal" -}}
+# ~/.config/bash/bc-compat.bash — managed by chezmoi (machine = linux-minimal).
+# Stand-ins for the handful of bash-completion helpers that the kubectl, helm and
+# oc completion scripts call. Sourced only when bash-completion is absent, which
+# is the normal state on a host you cannot install packages on.
+if ! declare -F _get_comp_words_by_ref >/dev/null 2>&1; then
+  _get_comp_words_by_ref() {
+    local v skip=0
+    for v in "$@"; do
+      if [ "$skip" = 1 ]; then skip=0; continue; fi
+      case $v in
+        -n|-c|-p|-w|-i) skip=1 ;;
+        cur)   cur=${COMP_WORDS[COMP_CWORD]} ;;
+        prev)  prev=${COMP_WORDS[COMP_CWORD-1]:-} ;;
+        words) words=("${COMP_WORDS[@]}") ;;
+        cword) cword=$COMP_CWORD ;;
+      esac
+    done
+  }
+fi
+if ! declare -F __ltrim_colon_completions >/dev/null 2>&1; then
+  __ltrim_colon_completions() {
+    local cur_=$1 colon_word i
+    if [[ $cur_ == *:* && ${COMP_WORDBREAKS:-} == *:* ]]; then
+      colon_word=${cur_%"${cur_##*:}"}
+      for ((i = 0; i < ${#COMPREPLY[@]}; i++)); do
+        COMPREPLY[i]=${COMPREPLY[i]#"$colon_word"}
+      done
+    fi
+  }
+fi
+declare -F _init_completion >/dev/null 2>&1 || _init_completion() { _get_comp_words_by_ref cur prev words cword; }
+declare -F _filedir         >/dev/null 2>&1 || _filedir() { COMPREPLY=( $(compgen -f -- "${COMP_WORDS[COMP_CWORD]}") ); }
+{{- end -}}

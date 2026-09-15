@@ -14,9 +14,16 @@
 {{- end }}
 
 [core]
+{{- if ne .machine "linux-minimal" }}
 	pager = delta
 	editor = code --wait
+{{- else }}
+	# linux-minimal has neither delta nor VS Code, and naming a pager that is not
+	# installed makes `git log` and `git diff` print an error before their output.
+	editor = vim
+{{- end }}
 
+{{ if ne .machine "linux-minimal" -}}
 [interactive]
 	diffFilter = delta --color-only
 
@@ -24,6 +31,8 @@
 	navigate = true
 	line-numbers = true
 	side-by-side = false
+
+{{ end -}}
 
 [merge]
 	conflictStyle = zdiff3

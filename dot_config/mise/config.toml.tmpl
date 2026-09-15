@@ -17,6 +17,7 @@ pipx.uvx = true
 # group TOOLS.md, so a new tool belongs under one of them. The vocabulary is
 # shared with the Brewfile so both machines document alike.
 
+{{ if ne .machine "linux-minimal" -}}
 # --- Languages + runtimes ---
 node      = "lts"
 python    = "latest"
@@ -28,6 +29,8 @@ terraform = "latest"
 # would mean manual version bumps forever. mise's registry auto-tracks upstream's official
 # release binaries. If a real homebrew-core formula ever appears, move the mac to the Brewfile.
 regctl    = "latest"
+
+{{ end -}}
 
 {{ if eq .machine "wsl-work" -}}
 # === wsl-work: full mise-managed toolchain (no Homebrew on this box) ===
@@ -106,4 +109,30 @@ opentofu = "latest"
 
 # Java/JDK lives here when needed (uncomment + adjust version):
 # java = "temurin-21"
+{{- end }}
+
+{{ if eq .machine "linux-minimal" -}}
+# === linux-minimal: a host where you cannot install packages ===
+# Every entry is a single static binary, so none of it needs a runtime or root.
+
+# --- Kubernetes / cloud-native ---
+# kubectl and helm are deliberately absent. Where a host already ships them they
+# are usually matched to its clusters by whoever builds it, and a mise shim would
+# silently shadow that. On a host that has neither, add them yourself:
+#   mise use -g kubectl@1.34 helm@latest
+k9s       = "latest"
+stern     = "latest"
+kubectx   = "latest"
+kubens    = "latest"
+kustomize = "latest"
+
+# --- Dev utilities ---
+# Search and navigation: the difference between a bare login and a workstation.
+fzf       = "latest"   # Ctrl-R over history, Ctrl-T over files
+fd        = "latest"   # what Ctrl-T walks
+ripgrep   = "latest"
+zoxide    = "latest"
+bat       = "latest"
+jq        = "latest"
+yq        = "latest"
 {{- end }}

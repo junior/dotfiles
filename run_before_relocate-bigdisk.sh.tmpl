@@ -1,0 +1,123 @@
+{{- if and (eq .machine "linux-minimal") (hasKey . "bigdisk") -}}
+{{- if .bigdisk -}}
+#!/bin/sh
+# Move the directories that grow (tool installs, caches) onto a larger filesystem
+# and leave symlinks behind, so a small home stays small. Runs before the rest of
+# the apply so that anything installed afterwards lands in the right place.
+# Does nothing once the symlinks exist. Managed by chezmoi.
+set -eu
+BIG="{{ .bigdisk }}"
+
+[ -d "$BIG" ] || { mkdir -p "$BIG" 2>/dev/null || { echo ">>> bigdisk: cannot create $BIG, skipping"; exit 0; }; }
+[ -w "$BIG" ] || { echo ">>> bigdisk: $BIG is not writable, skipping"; exit 0; }
+chmod 700 "$BIG" 2>/dev/null || true      # yours alone, even on a shared filesystem
+mkdir -p "$BIG/cache" "$BIG/state" "$BIG/kube-cache" "$BIG/tmp"
+
+relocate() {          # relocate <dir in ~> <target>
+  src=$1; dst=$2
+  [ -L "$src" ] && return 0                       # already done
+  mkdir -p "$dst"
+  if [ -d "$src" ]; then
+    n_src=$(find "$src" 2>/dev/null | wc -l)
+    if (cd "$src" && tar cf - .) | (cd "$dst" && tar xf -); then
+      n_dst=$(find "$dst" 2>/dev/null | wc -l)
+      if [ "$n_dst" -ge "$n_src" ]; then
+        rm -rf "$src"
+        echo ">>> bigdisk: moved $(basename "$src") ($n_src entries) to $dst"
+      else
+        echo ">>> bigdisk: copy of $src looks short ($n_dst < $n_src), left alone"; return 0
+      fi
+    else
+      echo ">>> bigdisk: copy of $src failed, left alone"; return 0
+    fi
+  fi
+  ln -s "$dst" "$src"
+}
+
+# One-time migration. An earlier hand-rolled setup made ~/.local ITSELF a symlink
+# onto the big filesystem. chezmoi manages files under ~/.local/bin, and it
+# replaces a symlinked parent with a real directory, which would silently orphan
+# everything behind the old link (including a ~130 MB mise). Undo that first.
+if [ -L "$HOME/.local" ]; then
+  old=$(readlink -f "$HOME/.local" 2>/dev/null || true)
+  if [ -n "$old" ] && [ -d "$old" ]; then
+    echo ">>> bigdisk: migrating the old ~/.local symlink ($old)"
+    rm -f "$HOME/.local"
+    mkdir -p "$HOME/.local/bin"
+    # The tool installs move to their new home. Same filesystem, so this is a rename.
+    if [ -d "$old/share" ]; then
+      if [ -e "$BIG/share" ]; then
+        echo ">>> bigdisk: $BIG/share already exists; left $old/share in place, merge it by hand"
+      else
+        mv "$old/share" "$BIG/share" && echo ">>> bigdisk: moved share/ to $BIG/share"
+      fi
+    fi
+    # mise's binary is far too big for a small home: park it and link to it.
+    if [ -f "$old/bin/mise" ] && [ ! -L "$old/bin/mise" ]; then
+      mkdir -p "$BIG/bin"
+      mv -f "$old/bin/mise" "$BIG/bin/mise" && ln -sfn "$BIG/bin/mise" "$HOME/.local/bin/mise"
+      echo ">>> bigdisk: moved mise to $BIG/bin/mise"
+    fi
+    # Everything else in bin is small enough to live in the real directory.
+    if [ -d "$old/bin" ]; then
+      for f in "$old/bin"/* "$old/bin"/.[!.]*; do
+        [ -e "$f" ] || continue
+        mv -f "$f" "$HOME/.local/bin/" 2>/dev/null || true
+      done
+    fi
+    rmdir "$old/bin" 2>/dev/null || true
+    # Anything else that lived under the old link (mise's state/, say) keeps its
+    # name one level up, where the new layout expects it.
+    for d in "$old"/* "$old"/.[!.]*; do
+      [ -e "$d" ] || continue
+      n=$(basename "$d")
+      if [ ! -e "$BIG/$n" ]; then
+        mv "$d" "$BIG/$n" && echo ">>> bigdisk: moved $n/ to $BIG/$n"
+      elif [ -d "$d" ] && [ -d "$BIG/$n" ]; then
+        # Both exist (the old setup pre-created some of these). Move across only
+        # what does not collide, so nothing is overwritten, then drop the husk.
+        moved=0; kept=0
+        for c in "$d"/* "$d"/.[!.]*; do
+          [ -e "$c" ] || continue
+          if [ -e "$BIG/$n/$(basename "$c")" ]; then kept=$((kept+1))
+          else mv "$c" "$BIG/$n/" && moved=$((moved+1)); fi
+        done
+        rmdir "$d" 2>/dev/null || true
+        echo ">>> bigdisk: merged $n/ into $BIG/$n ($moved moved, $kept already there)"
+      else
+        echo ">>> bigdisk: $BIG/$n already exists and is not a directory; left $d alone"
+      fi
+    done
+    rmdir "$old" 2>/dev/null \
+      || echo ">>> bigdisk: $old is not empty; look at what is left before deleting it"
+  fi
+fi
+
+# The predecessor of this profile kept its shell snippets in ~/.config/jump and
+# sourced them from a marked block in ~/.bashrc. chezmoi owns ~/.bashrc now, so
+# nothing reads them any more. Remove them, but only if they are in fact the
+# generated files and not something of yours that happens to share the name.
+if [ -d "$HOME/.config/jump" ]; then
+  leftover=$(find "$HOME/.config/jump" -type f ! -name 'rc.bash' ! -name 'bc-compat.bash' 2>/dev/null | head -1)
+  if [ -z "$leftover" ] && grep -ql 'written by jump-setup' "$HOME/.config/jump"/*.bash 2>/dev/null; then
+    rm -rf "$HOME/.config/jump"
+    echo ">>> bigdisk: removed ~/.config/jump (superseded by the managed ~/.bashrc)"
+  else
+    echo ">>> bigdisk: ~/.config/jump has files I did not write; leaving it for you"
+  fi
+fi
+
+# Relocate the two directories that actually grow, NOT ~/.local itself: chezmoi
+# manages ~/.local/bin/{tx,oscopy,tmux-tidy}, and it replaces a symlinked parent
+# with a real directory when it owns files inside it, which would silently undo
+# the move. ~/.local/share holds every tool mise installs; ~/.cache holds the
+# download cache. Neither has anything chezmoi manages.
+mkdir -p "$HOME/.local"
+relocate "$HOME/.local/share" "$BIG/share"
+relocate "$HOME/.cache"       "$BIG/cache"
+
+# mise's own binary is ~130 MB, far too big for a small home, and chezmoi does
+# not manage it, so it lives on the big filesystem with a link from ~/.local/bin.
+mkdir -p "$BIG/bin" "$HOME/.local/bin"
+{{ end -}}
+{{- end -}}

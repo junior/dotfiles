@@ -1,0 +1,19 @@
+{{- if eq .machine "linux-minimal" -}}
+" ~/.vimrc — managed by chezmoi (machine = linux-minimal).
+" Aimed at editing YAML over a slow link, where a paste must not be reindented.
+set nocompatible
+set backspace=indent,eol,start
+set pastetoggle=<F9>      " F9 before pasting, F9 after; :set paste also works
+set tabstop=2 shiftwidth=2 expandtab
+set autoindent
+set number
+set ruler
+set laststatus=2
+set incsearch hlsearch ignorecase smartcase
+set mouse=                " keep vim off the mouse so Shift-drag selection still works
+set clipboard=
+set nomodeline            " never let a pasted file run modelines
+syntax on
+filetype plugin indent on
+autocmd FileType yaml setlocal ts=2 sw=2 expandtab indentkeys-=0#
+{{- end -}}

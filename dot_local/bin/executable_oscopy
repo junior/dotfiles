@@ -1,0 +1,15 @@
+#!/bin/sh
+# oscopy — send stdin to the terminal's clipboard using OSC 52.
+# Survives ssh and tmux, so on a remote host it still reaches the clipboard of
+# the machine you are sitting at. Managed by chezmoi.
+#   some-command | oscopy        cat file | oscopy
+set -eu
+b=$(base64 2>/dev/null | tr -d '\n') || { echo "oscopy: base64 failed" >&2; exit 1; }
+n=${#b}
+[ "$n" -gt 74994 ] && printf 'oscopy: %s bytes of base64; terminals often cap near 75k\n' "$n" >&2
+if [ -n "${TMUX:-}" ]; then
+  printf '\033Ptmux;\033\033]52;c;%s\007\033\\' "$b"
+else
+  printf '\033]52;c;%s\007' "$b"
+fi
+printf 'oscopy: copied %s bytes\n' "$n" >&2

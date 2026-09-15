@@ -1,0 +1,178 @@
+{{- if eq .machine "linux-minimal" -}}
+{{- $big := "" -}}{{- if hasKey . "bigdisk" }}{{ $big = .bigdisk }}{{ end -}}
+# ~/.bashrc — managed by chezmoi (machine = linux-minimal).
+#
+# A bash profile for hosts where you get a home directory and nothing else: no
+# root, no package manager, whatever the distro shipped. Tools come from mise
+# (see ~/.config/mise/config.toml); completions are supplied here because these
+# hosts rarely have bash-completion installed.
+
+case $- in *i*) ;; *) return ;; esac        # interactive shells only
+
+# --- PATH: ~/.local/bin first, so a newer tool there beats an older /usr/bin one ---
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*) PATH=":$PATH:"; PATH=${PATH//:$HOME\/.local\/bin:/:}; PATH=${PATH#:}; PATH=${PATH%:} ;;
+esac
+PATH="$HOME/.local/bin:$PATH"
+# mise shims are real files, so they also work in scripts and non-interactive ssh,
+# which a shell hook would not. Harmless when mise is not installed yet.
+case ":$PATH:" in
+  *":$HOME/.local/share/mise/shims:"*) ;;
+  *) PATH="$HOME/.local/share/mise/shims:$PATH" ;;
+esac
+export PATH
+
+# --- history expansion off: pasting code containing '!' stops breaking ---
+set +H
+
+# --- history: large, timestamped, shared across panes ---
+HISTSIZE=100000
+HISTFILESIZE=200000
+HISTCONTROL=ignoreboth:erasedups
+HISTTIMEFORMAT='%F %T  '
+HISTIGNORE='ls:ll:la:bg:fg:history:clear:exit:tx *:* | tx *'
+shopt -s histappend cmdhist 2>/dev/null
+_hist_sync() { history -a; history -n; }
+case "${PROMPT_COMMAND:-}" in
+  *_hist_sync*) ;;
+  *) PROMPT_COMMAND="_hist_sync${PROMPT_COMMAND:+; $PROMPT_COMMAND}" ;;
+esac
+
+# --- shell behaviour ---
+shopt -s checkwinsize cdspell dirspell autocd globstar no_empty_cmd_completion 2>/dev/null
+
+{{ if $big -}}
+# --- large filesystem: keep caches, state and history off a small home ---
+# Set at chezmoi init time; blank means everything stays in $HOME.
+export XDG_CACHE_HOME="{{ $big }}/cache"
+export XDG_STATE_HOME="{{ $big }}/state"
+export KUBECACHEDIR="{{ $big }}/kube-cache"      # else kubectl fills ~/.kube/cache
+HISTFILE="{{ $big }}/state/bash_history"
+# A noexec /tmp (common under CIS hardening) breaks anything that unpacks and then
+# runs from TMPDIR. Point it somewhere executable on the same large filesystem.
+if [ -z "${TMPDIR:-}" ] && ! { : >/dev/null; } 2>/dev/null; then :; fi
+case "$(awk -v m="$(df -P /tmp 2>/dev/null | awk 'NR==2{print $6}')" '$2==m{print $4}' /proc/mounts 2>/dev/null)" in
+  *noexec*) export TMPDIR="{{ $big }}/tmp"; [ -d "$TMPDIR" ] || mkdir -p "$TMPDIR" ;;
+esac
+{{ end -}}
+
+# --- editor and pager ---
+if command -v vim >/dev/null 2>&1; then export EDITOR=vim VISUAL=vim
+else export EDITOR=vi VISUAL=vi; fi
+export PAGER=less
+export LESS='-R -i -M -F -X'        # -X keeps output in the tmux scrollback
+
+# --- aliases ---
+alias ls='ls --color=auto'
+alias ll='ls -lah --color=auto'
+alias la='ls -A --color=auto'
+alias grep='grep --color=auto'
+alias egrep='egrep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias path='printf "%s\n" ${PATH//:/ }'
+alias reload='exec bash -l'
+command -v oscopy  >/dev/null 2>&1 && alias pbcopy='oscopy'
+command -v kubectl >/dev/null 2>&1 && alias k=kubectl
+command -v helm    >/dev/null 2>&1 && alias h=helm
+command -v kubectx >/dev/null 2>&1 && alias kc=kubectx
+command -v kubens  >/dev/null 2>&1 && alias kn=kubens
+command -v git     >/dev/null 2>&1 && { alias gs='git status -sb'; alias gd='git diff'; alias gl='git log --oneline --graph --decorate'; }
+
+# --- completions -------------------------------------------------------------
+# These hosts usually lack bash-completion, and the kubectl/helm completion
+# scripts call four of its helper functions, so ship stand-ins.
+export BASH_COMPDIR="$HOME/.local/share/bash-completion/completions"
+if   [ -r /usr/share/bash-completion/bash_completion ]; then . /usr/share/bash-completion/bash_completion
+elif [ -r /etc/bash_completion ];                       then . /etc/bash_completion
+elif [ -r "$HOME/.config/bash/bc-compat.bash" ];        then . "$HOME/.config/bash/bc-compat.bash"
+fi
+# Load a tool's completion on the first TAB for it, not at every shell start.
+if [ "${BASH_VERSINFO[0]:-3}" -ge 4 ]; then
+  _lazy_complete() {
+    local cmd=${COMP_WORDS[0]} target src spec
+    target=$cmd
+    case $cmd in k) target=kubectl ;; h) target=helm ;; esac
+    src="$BASH_COMPDIR/$target"
+    [ -r "$src" ] || return 1
+    complete -r "$cmd" 2>/dev/null
+    . "$src" 2>/dev/null
+    if [ "$cmd" != "$target" ]; then
+      spec=$(complete -p "$target" 2>/dev/null) && [ -n "$spec" ] && eval "${spec% *} $cmd"
+    fi
+    return 124                       # tells bash to retry completion, now loaded
+  }
+  if [ -d "$BASH_COMPDIR" ]; then
+    for _f in "$BASH_COMPDIR"/*; do
+      [ -r "$_f" ] || continue
+      complete -o default -F _lazy_complete "${_f##*/}" 2>/dev/null
+    done
+    unset _f
+  fi
+  command -v kubectl >/dev/null 2>&1 && complete -o default -F _lazy_complete k 2>/dev/null
+  command -v helm    >/dev/null 2>&1 && complete -o default -F _lazy_complete h 2>/dev/null
+fi
+
+# --- fuzzy search: Ctrl-R over history, Ctrl-T over files --------------------
+if command -v fzf >/dev/null 2>&1; then
+  export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border --info=inline'
+  command -v fd >/dev/null 2>&1 && export FZF_CTRL_T_COMMAND='fd --type f --hidden --exclude .git'
+  # fzf >= 0.48 ships its own loader; older builds keep the files beside the binary.
+  if fzf --bash >/dev/null 2>&1; then eval "$(fzf --bash)"
+  else
+    for _d in "$HOME/.local/share/fzf/shell" /usr/share/fzf/shell /usr/share/doc/fzf/examples; do
+      [ -r "$_d/key-bindings.bash" ] && . "$_d/key-bindings.bash" && break
+    done
+    unset _d
+  fi
+fi
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init bash)"
+
+# --- prompt: exit code, user@host, cwd, kube context -------------------------
+_kube_ctx() {
+  local kc=${KUBECONFIG%%:*}; kc=${kc:-$HOME/.kube/config}
+  [ -r "$kc" ] || return 0
+  local c; c=$(sed -n 's/^current-context: *//p' "$kc" 2>/dev/null | head -1)
+  [ -n "$c" ] && printf ' (%s)' "${c##*/}"
+}
+_set_ps1() {
+  local rc=$?
+  local red='\[\e[31m\]' grn='\[\e[32m\]' ylw='\[\e[33m\]' blu='\[\e[34m\]' \
+        cyn='\[\e[36m\]' dim='\[\e[2m\]' rst='\[\e[0m\]'
+  local mark="$grn\$"; [ "$rc" -ne 0 ] && mark="$red$rc \$"
+  PS1="${dim}[\t]${rst} ${cyn}\u@\h${rst} ${blu}\w${rst}${ylw}$(_kube_ctx)${rst}\n${mark}${rst} "
+  printf '\033]0;%s@%s: %s\007' "${USER:-?}" "${HOSTNAME%%.*}" "${PWD/#$HOME/\~}"
+}
+case "${PROMPT_COMMAND:-}" in
+  *_set_ps1*) ;;
+  *) PROMPT_COMMAND="_set_ps1${PROMPT_COMMAND:+; $PROMPT_COMMAND}" ;;
+esac
+
+# --- private overlay ---------------------------------------------------------
+# Anything that cannot live in a public repo (employer CLIs, internal hostnames)
+# goes here. Unpacked separately; this file only sources it if it exists.
+[ -r "$HOME/.config/bash/local.bash" ] && . "$HOME/.config/bash/local.bash"
+for _f in "$HOME/.config/bash/local.d"/*.bash; do
+  [ -r "$_f" ] && . "$_f"
+done
+unset _f
+
+# --- what did this give me? --------------------------------------------------
+jhelp() {
+  cat <<'H'
+this profile
+  scrollback      mouse wheel, or Shift-PageUp.  q leaves copy mode.
+  select text     hold Shift and drag (the terminal's own selection)
+  copy out        <cmd> | oscopy       also aliased to pbcopy
+  paste code in   history expansion is off; for a file use:
+                    cat > file.yaml <<'EOF'      then paste, then EOF
+  vim paste       F9 toggles paste mode, or :set paste
+  tmux sessions   tmux ls | tmux-tidy | tmux-tidy -f
+  history         Up/Down search on what you typed; Ctrl-R fuzzy (fzf)
+  tools           mise use -g NAME@latest   (mise ls, mise upgrade)
+  completions     load on first TAB
+H
+}
+{{- end -}}

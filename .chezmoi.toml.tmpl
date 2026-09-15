@@ -2,10 +2,23 @@
        Every value uses a *Once helper: an answer already present in the config is reused, so
        re-running `chezmoi init` (e.g. after this template changes) never loses local settings.
        Optional values may be left blank — the templates that consume them then emit nothing. */ -}}
-{{- $machine := promptChoiceOnce . "machine" "Which machine is this" (list "mac-personal" "wsl-work") -}}
+{{- $machine := promptChoiceOnce . "machine" "Which machine is this" (list "mac-personal" "wsl-work" "linux-minimal") -}}
 {{- $signingkey := promptStringOnce . "signingkey" "OpenPGP signing key fingerprint, blank for none" "" -}}
 {{- $corpCaURL := promptStringOnce . "corp_ca_url" "Extra CA bundle URL for TLS-inspecting networks, blank for none" "" -}}
+{{- $bigdisk := "" -}}
+{{- if eq $machine "linux-minimal" -}}
+{{-   $bigdisk = promptStringOnce . "bigdisk" "Writable dir on a bigger filesystem for tools/caches, blank to keep everything in $HOME" "" -}}
+{{- end -}}
 
+{{ if eq $machine "linux-minimal" -}}
+# chezmoi writes run_ scripts into a temp directory and executes them there.
+# Hardened hosts mount /tmp with noexec, which makes every script fail with
+# "permission denied", so keep them under $HOME instead. Deliberately NOT inside
+# ~/.local or ~/.cache: those two are the ones the bigdisk script relocates, and
+# a script must not have its own file moved out from under it while it runs.
+scriptTempDir = {{ (printf "%s/.chezmoi-tmp" .chezmoi.homeDir) | quote }}
+
+{{ end -}}
 [data]
     machine = {{ $machine | quote }}
     # Blank unless this machine signs commits: enables user.signingkey, gpg.format
@@ -14,3 +27,8 @@
     # Blank unless this machine is behind TLS inspection: extra roots appended to
     # the system bundle for the buildx builder.
     corp_ca_url = {{ $corpCaURL | quote }}
+    # linux-minimal only. Some hosts give you a tiny home and a large shared
+    # filesystem; point this at a directory you own there and caches, tool
+    # installs, state and shell history go to it instead of filling $HOME.
+    # Blank keeps the normal layout, which is what a Pi or a NUC wants.
+    bigdisk = {{ $bigdisk | quote }}
