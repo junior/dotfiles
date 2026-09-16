@@ -126,6 +126,13 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | [google-chrome@canary](https://www.google.com/chrome/canary/) | Web browser |
 | [tor-browser](https://www.torproject.org/) | Web browser focusing on security |
 
+### Casks: network
+
+| Tool | What it is |
+| --- | --- |
+| [wifiman](https://wifiman.com/) | Network monitoring and troubleshooting tool |
+| [wireshark-app](https://www.wireshark.org/) | Network protocol analyzer |
+
 ### Casks: containers + Kubernetes UIs
 
 | Tool | What it is |
@@ -139,6 +146,7 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 
 | Tool | What it is |
 | --- | --- |
+| [1password](https://1password.com/) | Password manager that keeps all passwords secure behind one password |
 | [discord](https://discord.com/) | Voice and text chat software |
 | [microsoft-teams](https://www.microsoft.com/en/microsoft-teams/group-chat-software/) | Meet, chat, call, and collaborate in just one place |
 | [notion](https://www.notion.com/) | App to write, plan, collaborate, and get organised |
@@ -150,6 +158,8 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | Tool | What it is |
 | --- | --- |
 | [apidog](https://apidog.com/) | API development platform |
+| [forklift](https://binarynights.com/) | Finder replacement and FTP, SFTP, WebDAV and Amazon s3 client |
+| [monokle](https://github.com/kubeshop/monokle) | IDE dedicated to high-quality Kubernetes YAML configurations |
 | [dash](http://gondor.apana.org.au/~herbert/dash/) | POSIX-compliant descendant of NetBSD's ash (the Almquist SHell) |
 | [drawio](https://www.diagrams.net/) | Online diagram software |
 | [github](https://desktop.github.com/) | Desktop client for GitHub repositories |
@@ -172,11 +182,11 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | [claude](https://claude.com/download) | Anthropic's official Claude AI desktop app |
 | [claude-code@latest](https://claude.com/product/claude-code) | Terminal-based AI coding assistant |
 | [codex](https://github.com/openai/codex) | OpenAI's coding agent that runs in your terminal |
-| [sbx](https://github.com/docker/sbx-releases) | Build, run, and govern agents across the software development lifecycle |
 | [grammarly-desktop](https://www.grammarly.com/desktop) | Grammarly for desktop |
 | [licecap](https://www.cockos.com/licecap/) | Animated screen capture application |
-| [lm-studio](https://lmstudio.ai/) | Discover, download, and run local LLMs |
 | [microsoft-auto-update](https://docs.microsoft.com/officeupdates/release-history-microsoft-autoupdate) | Provides updates to various Microsoft products |
+| [sbx](https://github.com/docker/sbx-releases) | Build, run, and govern agents across the software development lifecycle |
+| [lm-studio](https://lmstudio.ai/) | Discover, download, and run local LLMs |
 
 ### Casks: fonts
 
@@ -317,3 +327,37 @@ mise from `dot_config/mise/config.toml.tmpl` — no Homebrew on this box — plu
 | [deprecations](https://krew.sigs.k8s.io/plugins/) | Flag deprecated and removed Kubernetes APIs in a cluster |
 | [gadget](https://krew.sigs.k8s.io/plugins/) | Inspektor Gadget — eBPF tooling for inspecting workloads |
 | [grep](https://krew.sigs.k8s.io/plugins/) | Filter Kubernetes resources by matching their names |
+
+## linux-minimal
+
+mise from `dot_config/mise/config.toml.tmpl` on a host with no package manager: static binaries only, nothing that needs root, plus the `run_` installers that render for this profile. krew and its plugins join only when the `extras` answer at init asks for them.
+
+### Kubernetes / cloud-native
+
+| Tool | What it is |
+| --- | --- |
+| [k9s](https://k9scli.io/) | Kubernetes CLI To Manage Your Clusters In Style! |
+| [kubecolor](https://kubecolor.github.io/) | Colorize your kubectl output |
+| [stern](https://github.com/stern/stern) | Tail multiple Kubernetes pods & their containers |
+| [kubectx](https://github.com/ahmetb/kubectx) | Tool that can switch between kubectl contexts easily and create aliases |
+| [kubens](https://github.com/ahmetb/kubectx) | Switch between Kubernetes namespaces (ships with kubectx) |
+| [kustomize](https://github.com/kubernetes-sigs/kustomize) | Template-free customization of Kubernetes YAML manifests |
+
+### Dev utilities
+
+| Tool | What it is |
+| --- | --- |
+| [eza](https://eza.rocks) | Modern, maintained replacement for ls |
+| [fzf](https://junegunn.github.io/fzf/) | Command-line fuzzy finder written in Go |
+| [fd](https://github.com/sharkdp/fd) | Simple, fast and user-friendly alternative to find |
+| [ripgrep](https://github.com/BurntSushi/ripgrep) | Search tool like grep and The Silver Searcher |
+| [zoxide](https://github.com/ajeetdsouza/zoxide) | Shell extension to navigate your filesystem faster |
+| [bat](https://github.com/sharkdp/bat) | Clone of cat(1) with syntax highlighting and Git integration |
+| [jq](https://jqlang.github.io/jq/) | Lightweight and flexible command-line JSON processor |
+| [yq](https://github.com/mikefarah/yq) | Process YAML, JSON, XML, CSV and properties documents from the CLI |
+
+### Tool manager
+
+| Tool | What it is |
+| --- | --- |
+| [mise](https://mise.jdx.dev/) | Polyglot runtime manager (asdf rust clone) |

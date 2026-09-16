@@ -69,9 +69,16 @@ export PAGER=less
 export LESS='-R -i -M -F -X'        # -X keeps output in the tmux scrollback
 
 # --- aliases ---
-alias ls='ls --color=auto'
-alias ll='ls -lah --color=auto'
-alias la='ls -A --color=auto'
+if command -v eza >/dev/null 2>&1; then     # same aliases as the zsh profile
+  alias ls='eza --icons --group-directories-first'
+  alias ll='eza -lah --icons --git --group-directories-first'
+  alias la='eza -a --icons --group-directories-first'
+  alias lt='eza --tree --level=2 --icons --group-directories-first'
+else
+  alias ls='ls --color=auto'
+  alias ll='ls -lah --color=auto'
+  alias la='ls -A --color=auto'
+fi
 alias grep='grep --color=auto'
 alias egrep='egrep --color=auto'
 alias fgrep='fgrep --color=auto'
@@ -81,7 +88,8 @@ alias ....='cd ../../..'
 alias path='printf "%s\n" ${PATH//:/ }'
 alias reload='exec bash -l'
 command -v oscopy  >/dev/null 2>&1 && alias pbcopy='oscopy'
-command -v kubectl >/dev/null 2>&1 && alias k=kubectl
+if   command -v kubecolor >/dev/null 2>&1; then alias k=kubecolor
+elif command -v kubectl   >/dev/null 2>&1; then alias k=kubectl; fi
 command -v helm    >/dev/null 2>&1 && alias h=helm
 command -v kubectx >/dev/null 2>&1 && alias kc=kubectx
 command -v kubens  >/dev/null 2>&1 && alias kn=kubens
@@ -100,7 +108,7 @@ if [ "${BASH_VERSINFO[0]:-3}" -ge 4 ]; then
   _lazy_complete() {
     local cmd=${COMP_WORDS[0]} target src spec
     target=$cmd
-    case $cmd in k) target=kubectl ;; h) target=helm ;; esac
+    case $cmd in k|kubecolor) target=kubectl ;; h) target=helm ;; esac
     src="$BASH_COMPDIR/$target"
     [ -r "$src" ] || return 1
     complete -r "$cmd" 2>/dev/null
@@ -118,6 +126,7 @@ if [ "${BASH_VERSINFO[0]:-3}" -ge 4 ]; then
     unset _f
   fi
   command -v kubectl >/dev/null 2>&1 && complete -o default -F _lazy_complete k 2>/dev/null
+  command -v kubecolor >/dev/null 2>&1 && complete -o default -F _lazy_complete kubecolor 2>/dev/null
   command -v helm    >/dev/null 2>&1 && complete -o default -F _lazy_complete h 2>/dev/null
 fi
 

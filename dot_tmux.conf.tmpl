@@ -6,7 +6,7 @@
        No tmux found means a future install, so assume a current release. */ -}}
 {{- $maj := 3 -}}{{- $min := 0 -}}
 {{- if lookPath "tmux" -}}
-{{-   $v := regexReplaceAll "[^0-9.]" "" (replace "tmux " "" (trim (output "tmux" "-V"))) -}}
+{{-   $v := regexReplaceAll "[^0-9.]" (replace "tmux " "" (trim (output "tmux" "-V"))) "" -}}
 {{-   $parts := splitList "." $v -}}
 {{-   if ge (len $parts) 1 }}{{ $maj = atoi (index $parts 0) }}{{ end -}}
 {{-   if ge (len $parts) 2 }}{{ $min = atoi (index $parts 1) }}{{ end -}}

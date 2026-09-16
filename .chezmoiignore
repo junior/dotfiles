@@ -25,6 +25,9 @@ bootstrap.sh
 {{- end }}
 {{ if eq .machine "linux-minimal" -}}
 # No zsh to configure, no Homebrew, no GUI, no container runtime on these hosts.
+# No managed git identity either: these hosts commit, if at all, under whatever
+# identity the environment provides.
+.gitconfig
 .zshrc
 .p10k.zsh
 .Brewfile

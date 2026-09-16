@@ -244,8 +244,10 @@ def main():
                      r'(?:brew|cask)\s+"([^"]+)"')
     mise_mac = parse(render("dot_config/mise/config.toml.tmpl", "mac-personal"), MISE)
     mise_wsl = parse(render("dot_config/mise/config.toml.tmpl", "wsl-work"), MISE)
+    mise_lm = parse(render("dot_config/mise/config.toml.tmpl", "linux-minimal"), MISE)
     scripts_mac = script_tools("mac-personal")
     scripts_wsl = script_tools("wsl-work")
+    scripts_lm = script_tools("linux-minimal")
 
     def group(*sources):
         """[(category, [keys])] merged across sources, first-seen order."""
@@ -263,7 +265,7 @@ def main():
 
     # One batched lookup for anything not installed on this machine.
     wanted = [split_key(n)[0] for _, n in
-              brewfile + mise_wsl + mise_mac + scripts_mac + scripts_wsl]
+              brewfile + mise_wsl + mise_mac + mise_lm + scripts_mac + scripts_wsl + scripts_lm]
     unknown = {alias.get(n, n) for n in wanted if alias.get(n, n) not in meta}
     extra = fetch_core(sorted(unknown & core), sorted(unknown & cask_names()))
 
@@ -295,6 +297,11 @@ def main():
             "mise from `dot_config/mise/config.toml.tmpl` — no Homebrew on this "
             "box — plus the `run_` installer scripts for what mise cannot carry. "
             "Entries above the machine blocks are installed on both.")
+    section("linux-minimal", group(mise_lm, scripts_lm),
+            "mise from `dot_config/mise/config.toml.tmpl` on a host with no package "
+            "manager: static binaries only, nothing that needs root, plus the `run_` "
+            "installers that render for this profile. krew and its plugins join only "
+            "when the `extras` answer at init asks for them.")
 
     out = "\n".join(lines).rstrip() + "\n"
     path = os.path.join(SRC, "TOOLS.md")
