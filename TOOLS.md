@@ -355,6 +355,7 @@ mise from `dot_config/mise/config.toml.tmpl` on a host with no package manager: 
 | [bat](https://github.com/sharkdp/bat) | Clone of cat(1) with syntax highlighting and Git integration |
 | [jq](https://jqlang.github.io/jq/) | Lightweight and flexible command-line JSON processor |
 | [yq](https://github.com/mikefarah/yq) | Process YAML, JSON, XML, CSV and properties documents from the CLI |
+| `blesh` | — |
 
 ### Tool manager
 

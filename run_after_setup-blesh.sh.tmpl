@@ -1,0 +1,67 @@
+{{- if eq .machine "linux-minimal" -}}
+#!/bin/sh
+# tools-category: Dev utilities
+# tools-installs: blesh
+# ble.sh, the Bash Line Editor: fish-style autosuggestions from history, syntax
+# highlighting and menu completion, in pure bash. No root, no package manager.
+# Pinned to a tagged release and checked against a known SHA-256, because the
+# project publishes no checksum files. To bump: download the new asset,
+# sha256sum it, update PIN, ASSET and SHA below.
+#
+# Named setup-* so it sorts after install-mise: it also writes fzf's two shell
+# files from `fzf --bash`, which ble.sh's integration expects as files, and
+# refreshes them whenever the fzf version changes.
+set -eu
+PIN="v0.4.0-devel3"
+ASSET="ble-0.4.0-devel3-2.tar.xz"
+SHA="bdcdcfff216495403adf82a701fe41675f64b64644dc77caabd3e015871ebd61"
+URL="https://github.com/akinomyoga/ble.sh/releases/download/$PIN/$ASSET"
+DEST="$HOME/.local/share/blesh"
+STAMP="$DEST/.dotfiles-pin"
+PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+{{ if and (hasKey . "bigdisk") .bigdisk -}}
+TMPDIR="{{ .bigdisk }}/tmp"; mkdir -p "$TMPDIR"; export TMPDIR
+{{ end -}}
+command -v curl >/dev/null 2>&1 || { echo ">>> ble.sh: curl missing, skipping"; exit 0; }
+command -v xz   >/dev/null 2>&1 || { echo ">>> ble.sh: xz missing (needed to unpack), skipping"; exit 0; }
+
+if [ "$(cat "$STAMP" 2>/dev/null)" != "$ASSET" ]; then
+  echo ">>> ble.sh: installing $PIN"
+  tmp=$(mktemp -d) || exit 0
+  trap 'rm -rf "$tmp"' EXIT INT TERM
+  if ! curl -fsSL --connect-timeout 10 --max-time 120 -o "$tmp/$ASSET" "$URL"; then
+    echo ">>> WARN: ble.sh download failed, keeping what is there"; exit 0
+  fi
+  if command -v sha256sum >/dev/null 2>&1; then got=$(sha256sum "$tmp/$ASSET" | cut -d' ' -f1)
+  else got=$(openssl dgst -sha256 "$tmp/$ASSET" | sed 's/.*= *//'); fi
+  [ "$got" = "$SHA" ] || { echo ">>> WARN: ble.sh checksum mismatch, refusing to install"; exit 0; }
+  mkdir -p "$tmp/x" && tar xJf "$tmp/$ASSET" -C "$tmp/x"
+  src=$(find "$tmp/x" -maxdepth 2 -name ble.sh -type f | head -1)
+  [ -n "$src" ] || { echo ">>> WARN: unexpected ble.sh archive layout"; exit 0; }
+  mkdir -p "$(dirname "$DEST")"
+  rm -rf "$DEST.new"; cp -r "$(dirname "$src")" "$DEST.new"
+  rm -rf "$DEST.old"; [ -d "$DEST" ] && mv "$DEST" "$DEST.old"
+  mv "$DEST.new" "$DEST"; rm -rf "$DEST.old"
+  printf '%s\n' "$ASSET" > "$STAMP"
+  echo ">>> ble.sh $PIN installed"
+fi
+
+# fzf's shell files for ble.sh's contrib integration, split out of `fzf --bash`.
+if command -v fzf >/dev/null 2>&1; then
+  FZFDIR="$HOME/.local/share/fzf"; FSTAMP="$FZFDIR/.dotfiles-fzf"
+  ver=$(fzf --version 2>/dev/null | head -1)
+  if [ -n "$ver" ] && [ "$(cat "$FSTAMP" 2>/dev/null)" != "$ver" ]; then
+    mkdir -p "$FZFDIR"
+    fzf --bash 2>/dev/null | awk -v d="$FZFDIR" '
+      /^### key-bindings\.bash ###/ { f = d "/key-bindings.bash"; next }
+      /^### completion\.bash ###/   { f = d "/completion.bash";   next }
+      /^### end: /                  { f = "";                      next }
+      f != ""                       { print > f }'
+    if [ -s "$FZFDIR/key-bindings.bash" ] && [ -s "$FZFDIR/completion.bash" ]; then
+      printf '%s\n' "$ver" > "$FSTAMP"; echo ">>> fzf shell files written for ble.sh ($ver)"
+    else
+      echo ">>> WARN: could not split the output of fzf --bash"
+    fi
+  fi
+fi
+{{- end -}}

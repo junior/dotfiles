@@ -113,6 +113,7 @@ so it cannot list something that is not actually installed.
 | `run_onchange_install-krew-plugins.sh.tmpl` | — | Declarative kubectl/krew plugin list (mac and WSL; on linux-minimal only when asked for via `extras`; bootstraps krew on Linux, skips without git) |
 | `run_before_relocate-bigdisk.sh.tmpl` | — | linux-minimal: moves tool installs, caches and history to a bigger filesystem and links them back |
 | `run_after_install-mise.sh.tmpl` | — | linux-minimal: checksum-verified mise, then every declared tool and its bash completion, reconciled on every apply |
+| `run_after_setup-blesh.sh.tmpl` | — | linux-minimal: ble.sh, pinned and checksum-verified, for fish-style autosuggestions in bash; also splits `fzf --bash` into the files ble.sh's fzf integration reads |
 | `dot_local/bin/executable_oscopy`, `executable_tmux-tidy` | `~/.local/bin/` | linux-minimal: copy to the clipboard of the machine you sit at over OSC 52; tidy stray tmux sessions |
 | `bootstrap.sh` | — | Installs a static chezmoi with no package manager and runs the init; `--bigdisk DIR` keeps even that off a small home |
 | `run_onchange_install-ebpf-tools.sh.tmpl` | — | bpftool & friends (WSL; upstream tarball quirks handled) |
@@ -191,16 +192,19 @@ What it does differently:
 - **Optional extras** are a comma-separated answer at init. `krew` adds the
   kubectl plugin manager and the plugin list from the other machines; it needs
   git, and is skipped with a message on hosts that have none.
-- **Terminal comforts that survive ssh and tmux:** Up/Down search history by
-  what you typed, Ctrl-R fuzzy history, a prompt with the current kube context,
+- **Terminal comforts that survive ssh and tmux:** fish-style autosuggestions
+  from history via [ble.sh](https://github.com/akinomyoga/ble.sh) (grey text
+  after the cursor, Right arrow accepts), Up/Down search history by what you
+  typed, Ctrl-R fuzzy history, a prompt with the current kube context,
   `oscopy` to put output on the clipboard of the machine you are sitting at,
   `tmux-tidy` for stray sessions, and `jhelp` to list all of it.
 
 Daily use is one command, `up`: pull, regenerate the config, apply, sync the
 private overlay if present, update mise tools and krew plugins, then print the
-toolchain by category and `footprint`, what the setup occupies and where. mise
-itself is pinned in the repo rather than self-updated, so upgrading it means
-bumping the pin.
+toolchain by category and `footprint`, what the setup occupies and where. It
+reports only what changed; a run where nothing moved prints "all current".
+mise itself is pinned in the repo rather than self-updated, so upgrading it
+means bumping the pin; the same goes for ble.sh.
 
 ## Work overlay (keeping employer-specific bits private)
 

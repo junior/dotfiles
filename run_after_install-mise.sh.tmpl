@@ -92,11 +92,15 @@ made=""
 for t in mise kubectl oc helm k9s stern kustomize kubectx kubens argocd flux velero; do
   command -v "$t" >/dev/null 2>&1 || continue
   if "$t" completion bash >"$COMPDIR/.$t.tmp" 2>/dev/null && [ -s "$COMPDIR/.$t.tmp" ]; then
-    mv -f "$COMPDIR/.$t.tmp" "$COMPDIR/$t"; made="$made $t"
+    if cmp -s "$COMPDIR/.$t.tmp" "$COMPDIR/$t" 2>/dev/null; then
+      rm -f "$COMPDIR/.$t.tmp"                       # unchanged: say nothing
+    else
+      mv -f "$COMPDIR/.$t.tmp" "$COMPDIR/$t"; made="$made $t"
+    fi
   else
     rm -f "$COMPDIR/.$t.tmp"
   fi
 done
-[ -n "$made" ] && echo ">>> completions:$made"
+[ -n "$made" ] && echo ">>> completions updated:$made"
 exit 0
 {{- end -}}

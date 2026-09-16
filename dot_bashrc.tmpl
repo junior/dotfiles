@@ -9,6 +9,14 @@
 
 case $- in *i*) ;; *) return ;; esac        # interactive shells only
 
+# --- ble.sh: fish-style autosuggestions and highlighting for bash -------------
+# Loaded first with --attach=none and attached at the very end, as its docs ask.
+if [ -r "$HOME/.local/share/blesh/ble.sh" ]; then
+  : "${HOSTNAME:=$(hostname 2>/dev/null)}"; export HOSTNAME   # ble.sh warns when this is unset
+  # shellcheck disable=SC1091
+  source "$HOME/.local/share/blesh/ble.sh" --attach=none
+fi
+
 # --- PATH: ~/.local/bin first, so a newer tool there beats an older /usr/bin one ---
 case ":$PATH:" in
   *":$HOME/.local/bin:"*) PATH=":$PATH:"; PATH=${PATH//:$HOME\/.local\/bin:/:}; PATH=${PATH#:}; PATH=${PATH%:} ;;
@@ -134,8 +142,14 @@ fi
 if command -v fzf >/dev/null 2>&1; then
   export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border --info=inline'
   command -v fd >/dev/null 2>&1 && export FZF_CTRL_T_COMMAND='fd --type f --hidden --exclude .git'
+  if [ -n "${BLE_VERSION-}" ] && [ -s "$HOME/.local/share/fzf/key-bindings.bash" ]; then
+    # Under ble.sh, fzf must come through ble's own integration, which reads the
+    # two shell files the setup script splits out of `fzf --bash`.
+    _ble_contrib_fzf_base="$HOME/.local/share/fzf"
+    ble-import integration/fzf-completion
+    ble-import integration/fzf-key-bindings
   # fzf >= 0.48 ships its own loader; older builds keep the files beside the binary.
-  if fzf --bash >/dev/null 2>&1; then eval "$(fzf --bash)"
+  elif fzf --bash >/dev/null 2>&1; then eval "$(fzf --bash)"
   else
     for _d in "$HOME/.local/share/fzf/shell" /usr/share/fzf/shell /usr/share/doc/fzf/examples; do
       [ -r "$_d/key-bindings.bash" ] && . "$_d/key-bindings.bash" && break
@@ -199,17 +213,34 @@ up() {
       echo "up: overlay host '${_ovhost:-?}' unreachable, skipping"
     fi
   fi
+  # Tools: say only what changed. mise and krew both narrate every tool they
+  # looked at; a snapshot before and after tells the real story in two lines.
   if command -v mise >/dev/null 2>&1; then
     echo "== tools: mise"
-    mise install -y && mise upgrade -y && mise prune -y
+    local _before _after
+    _before=$(_mise_snapshot)
+    mise install -q -y && mise upgrade -q -y && mise prune -q -y
+    _after=$(_mise_snapshot)
+    _report_snapshot "$_before" "$_after"
   fi
   if command -v kubectl-krew >/dev/null 2>&1; then
     echo "== tools: kubectl plugins"
-    kubectl krew upgrade || true
+    local _k; _k=$(kubectl krew upgrade 2>&1 \
+      | grep -vE '^(Updat(ing|ed) the local copy|Upgrading plugin:|Skipping plugin .* newest version)' || true)
+    [ -n "$_k" ] && printf '%s\n' "$_k" || echo "  all current"
   fi
   tools
   footprint
   echo "up: done. Run 'exec bash -l' if dotfiles changed."
+}
+
+_mise_snapshot() {   # "tool version" per installed version, sorted
+  mise ls --installed --json 2>/dev/null \
+    | jq -r 'to_entries[] | .key as $t | .value[] | "\($t) \(.version)"' 2>/dev/null | sort
+}
+_report_snapshot() { # before after -> "+ tool ver" / "- tool ver", or "all current"
+  local d; d=$(diff <(printf '%s\n' "$1") <(printf '%s\n' "$2") 2>/dev/null | grep -E '^[<>]' | sed 's/^</  -/; s/^>/  +/')
+  [ -n "$d" ] && printf '%s\n' "$d" || echo "  all current"
 }
 
 # tools: the toolchain by category, read from the same "# --- Category ---"
@@ -286,10 +317,15 @@ this profile
   vim paste       F9 toggles paste mode, or :set paste
   tmux sessions   tmux ls | tmux-tidy | tmux-tidy -f
   history         Up/Down search on what you typed; Ctrl-R fuzzy (fzf)
+  autosuggest     grey text after the cursor is ble.sh predicting from history;
+                  Right arrow or End accepts it
   tools           mise use -g NAME@latest   (mise ls, mise upgrade)
   completions     load on first TAB
   keep current    up          (pull, apply, upgrade tools)
   sizes           footprint   what lives where, in MB;  tools  by category
 H
 }
+
+# --- ble.sh attaches last, after every prompt and completion setting above ---
+[ -z "${BLE_VERSION-}" ] || ble-attach
 {{- end -}}
