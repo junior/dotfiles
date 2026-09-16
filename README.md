@@ -191,11 +191,12 @@ What it does differently:
   a jump host may well run 2.7.
 - **Optional extras** are a comma-separated answer at init. `krew` adds the
   kubectl plugin manager and the plugin list from the other machines; it needs
-  git, and is skipped with a message on hosts that have none.
-- **Terminal comforts that survive ssh and tmux:** fish-style autosuggestions
-  from history via [ble.sh](https://github.com/akinomyoga/ble.sh) (grey text
-  after the cursor, Right arrow accepts), Up/Down search history by what you
-  typed, Ctrl-R fuzzy history, a prompt with the current kube context,
+  git, and is skipped with a message on hosts that have none. `blesh` adds
+  [ble.sh](https://github.com/akinomyoga/ble.sh), fish-style autosuggestions
+  from history (grey text after the cursor, Right arrow accepts) and syntax
+  highlighting; it replaces bash's line editing, so it is a choice per host.
+- **Terminal comforts that survive ssh and tmux:** Up/Down search history by
+  what you typed, Ctrl-R fuzzy history, a prompt with the current kube context,
   `oscopy` to put output on the clipboard of the machine you are sitting at,
   `tmux-tidy` for stray sessions, and `jhelp` to list all of it.
 
@@ -205,6 +206,12 @@ toolchain by category and `footprint`, what the setup occupies and where. It
 reports only what changed; a run where nothing moved prints "all current".
 mise itself is pinned in the repo rather than self-updated, so upgrading it
 means bumping the pin; the same goes for ble.sh.
+
+Leaving is one command. `sh bootstrap.sh --uninstall` shows the plan and
+`--yes` runs it: managed files go, the distro's own `.bashrc` and
+`.bash_profile` come back from `/etc/skel`, the links and chezmoi and mise are
+removed, and the directory on the bigger filesystem is listed for you to delete
+by hand. Nothing you created yourself is touched.
 
 ## Work overlay (keeping employer-specific bits private)
 

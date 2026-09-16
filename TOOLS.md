@@ -330,7 +330,7 @@ mise from `dot_config/mise/config.toml.tmpl` — no Homebrew on this box — plu
 
 ## linux-minimal
 
-mise from `dot_config/mise/config.toml.tmpl` on a host with no package manager: static binaries only, nothing that needs root, plus the `run_` installers that render for this profile. krew and its plugins join only when the `extras` answer at init asks for them.
+mise from `dot_config/mise/config.toml.tmpl` on a host with no package manager: static binaries only, nothing that needs root, plus the `run_` installers that render for this profile. krew with its plugins, and ble.sh, join only when the `extras` answer at init asks for them.
 
 ### Kubernetes / cloud-native
 
@@ -355,7 +355,6 @@ mise from `dot_config/mise/config.toml.tmpl` on a host with no package manager: 
 | [bat](https://github.com/sharkdp/bat) | Clone of cat(1) with syntax highlighting and Git integration |
 | [jq](https://jqlang.github.io/jq/) | Lightweight and flexible command-line JSON processor |
 | [yq](https://github.com/mikefarah/yq) | Process YAML, JSON, XML, CSV and properties documents from the CLI |
-| `blesh` | — |
 
 ### Tool manager
 

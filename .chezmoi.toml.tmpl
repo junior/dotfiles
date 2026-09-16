@@ -9,7 +9,7 @@
 {{- $extras := "" -}}
 {{- if eq $machine "linux-minimal" -}}
 {{-   $bigdisk = promptStringOnce . "bigdisk" "Writable dir on a bigger filesystem for tools/caches, blank to keep everything in $HOME" "" -}}
-{{-   $extras = promptStringOnce . "extras" "Optional extras, comma-separated. Available: krew (kubectl plugins, needs git). Blank for none" "" -}}
+{{-   $extras = promptStringOnce . "extras" "Optional extras, comma-separated. Available: krew (kubectl plugins, needs git), blesh (fish-style autosuggestions for bash). Blank for none" "" -}}
 {{- end -}}
 
 {{ if eq $machine "linux-minimal" -}}
@@ -44,5 +44,6 @@ scriptTempDir = {{ (printf "%s/.chezmoi-tmp" .chezmoi.homeDir) | quote }}
     # Blank keeps the normal layout, which is what a Pi or a NUC wants.
     bigdisk = {{ $bigdisk | quote }}
     # linux-minimal only. Optional groups this host should also get, comma-separated.
-    # Currently: krew (kubectl plugin manager and the plugin list; needs git).
+    # krew: kubectl plugin manager and the plugin list (needs git).
+    # blesh: ble.sh, fish-style autosuggestions and highlighting in bash.
     extras = {{ $extras | quote }}

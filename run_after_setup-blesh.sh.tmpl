@@ -1,4 +1,10 @@
+{{- /* linux-minimal only, and only when the "extras" answer lists blesh: it replaces
+       bash's line editing, which is a conscious choice per host. */ -}}
+{{- $want := false -}}
 {{- if eq .machine "linux-minimal" -}}
+{{-   if hasKey . "extras" }}{{ if has "blesh" (regexSplit "\\s*,\\s*" .extras -1) }}{{ $want = true }}{{ end }}{{ end -}}
+{{- end -}}
+{{- if $want -}}
 #!/bin/sh
 # tools-category: Dev utilities
 # tools-installs: blesh
