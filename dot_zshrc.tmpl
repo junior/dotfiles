@@ -5,7 +5,10 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 # === PATH base ===
-export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+# ~/bin only while it still exists: it is being retired in favour of ~/.local/bin,
+# and a PATH entry for a directory that is gone is just noise for `path` and lookups.
+[[ -d "$HOME/bin" ]] && PATH="$HOME/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 
 {{ if eq .machine "wsl-work" -}}
 ZSH_PLUGIN_DIR="$HOME/.zsh/plugins"
