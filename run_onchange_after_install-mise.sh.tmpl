@@ -22,6 +22,14 @@ BIN="$REAL"
 mkdir -p "$HOME/.local/bin"
 {{- end }}
 
+{{ if and (hasKey . "bigdisk") .bigdisk -}}
+# Temp space for this script AND for mise: the tarball is 42 MB, it unpacks to
+# 130 MB, and mise's own downloads add more. chezmoi hands its scripts a TMPDIR
+# under $HOME (they must execute from somewhere, and /tmp may be noexec); fine
+# for a script file, fatal for a tarball on a home with tens of MB free.
+TMPDIR="{{ .bigdisk }}/tmp"; mkdir -p "$TMPDIR"; export TMPDIR
+MISE_TMP_DIR="$TMPDIR"; export MISE_TMP_DIR
+{{ end -}}
 case "$(uname -m)" in
   x86_64|amd64)  ARCH=x64 ;;
   aarch64|arm64) ARCH=arm64 ;;

@@ -17,7 +17,16 @@
 # ~/.local or ~/.cache: those two are the ones the bigdisk script relocates, and
 # a script must not have its own file moved out from under it while it runs.
 scriptTempDir = {{ (printf "%s/.chezmoi-tmp" .chezmoi.homeDir) | quote }}
-
+{{ if $bigdisk }}
+# The scripts themselves are tiny, but what they download is not: a mise tarball
+# is 42 MB, the gadget kubectl plugin more, and krew keeps its whole store under
+# KREW_ROOT. On a host whose home has tens of MB free, all of that must land on
+# the big filesystem. This is the environment every run_ script inherits.
+[scriptEnv]
+    TMPDIR = {{ (printf "%s/tmp" $bigdisk) | quote }}
+    MISE_TMP_DIR = {{ (printf "%s/tmp" $bigdisk) | quote }}
+    KREW_ROOT = {{ (printf "%s/krew" $bigdisk) | quote }}
+{{ end }}
 {{ end -}}
 [data]
     machine = {{ $machine | quote }}

@@ -6,13 +6,16 @@
 #
 # The krew binary itself: macOS comes from the Brewfile (brew "krew"); Linux/WSL
 # is bootstrapped here from the official release tarball, after which krew
-# manages itself as a plugin (~/.krew/bin/kubectl-krew — already on PATH via
-# .zshrc). git is required by krew for its plugin index.
+# manages itself as a plugin ($KREW_ROOT/bin/kubectl-krew, default ~/.krew — on PATH
+# via .zshrc and, on linux-minimal, .bashrc). git is required by krew for its index.
 set -eu
 
 PLUGINS=(access-matrix cert-manager deprecations gadget grep)
 
 command -v kubectl >/dev/null 2>&1 || { echo "krew-plugins: kubectl not found — skipping"; exit 0; }
+# krew clones its plugin index with git; without git the bootstrap fails halfway,
+# and a failing script aborts the whole chezmoi apply. Some minimal hosts have no git.
+command -v git >/dev/null 2>&1 || { echo "krew-plugins: git not found (krew needs it for its index) — skipping"; exit 0; }
 
 KREW_BIN="${KREW_ROOT:-$HOME/.krew}/bin/kubectl-krew"
 [ -x "$KREW_BIN" ] || KREW_BIN="$(command -v kubectl-krew 2>/dev/null || true)"

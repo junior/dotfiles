@@ -48,13 +48,19 @@ export XDG_CACHE_HOME="{{ $big }}/cache"
 export XDG_STATE_HOME="{{ $big }}/state"
 export KUBECACHEDIR="{{ $big }}/kube-cache"      # else kubectl fills ~/.kube/cache
 HISTFILE="{{ $big }}/state/bash_history"
+export KREW_ROOT="{{ $big }}/krew"              # kubectl plugins live there, not in ~/.krew
 # A noexec /tmp (common under CIS hardening) breaks anything that unpacks and then
 # runs from TMPDIR. Point it somewhere executable on the same large filesystem.
-if [ -z "${TMPDIR:-}" ] && ! { : >/dev/null; } 2>/dev/null; then :; fi
 case "$(awk -v m="$(df -P /tmp 2>/dev/null | awk 'NR==2{print $6}')" '$2==m{print $4}' /proc/mounts 2>/dev/null)" in
   *noexec*) export TMPDIR="{{ $big }}/tmp"; [ -d "$TMPDIR" ] || mkdir -p "$TMPDIR" ;;
 esac
 {{ end -}}
+
+# --- kubectl plugins (krew) ---
+case ":$PATH:" in
+  *":${KREW_ROOT:-$HOME/.krew}/bin:"*) ;;
+  *) PATH="$PATH:${KREW_ROOT:-$HOME/.krew}/bin" ;;
+esac
 
 # --- editor and pager ---
 if command -v vim >/dev/null 2>&1; then export EDITOR=vim VISUAL=vim

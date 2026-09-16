@@ -52,17 +52,20 @@ if [ -L "$HOME/.local" ]; then
         mv "$old/share" "$BIG/share" && echo ">>> bigdisk: moved share/ to $BIG/share"
       fi
     fi
-    # mise's binary is far too big for a small home: park it and link to it.
-    if [ -f "$old/bin/mise" ] && [ ! -L "$old/bin/mise" ]; then
-      mkdir -p "$BIG/bin"
-      mv -f "$old/bin/mise" "$BIG/bin/mise" && ln -sfn "$BIG/bin/mise" "$HOME/.local/bin/mise"
-      echo ">>> bigdisk: moved mise to $BIG/bin/mise"
-    fi
-    # Everything else in bin is small enough to live in the real directory.
+    # Executables come across one by one. Anything large (mise ~130 MB, chezmoi
+    # ~25 MB) is parked on the big filesystem with a link from ~/.local/bin;
+    # only the small scripts move into the real directory.
     if [ -d "$old/bin" ]; then
+      mkdir -p "$BIG/bin"
       for f in "$old/bin"/* "$old/bin"/.[!.]*; do
-        [ -e "$f" ] || continue
-        mv -f "$f" "$HOME/.local/bin/" 2>/dev/null || true
+        [ -e "$f" ] || [ -L "$f" ] || continue
+        n=$(basename "$f")
+        if [ -f "$f" ] && [ ! -L "$f" ] && [ "$(wc -c < "$f")" -gt 1048576 ]; then
+          mv -f "$f" "$BIG/bin/$n" && ln -sfn "$BIG/bin/$n" "$HOME/.local/bin/$n" \
+            && echo ">>> bigdisk: parked $n on $BIG/bin (linked from ~/.local/bin)"
+        else
+          mv -f "$f" "$HOME/.local/bin/" 2>/dev/null || true
+        fi
       done
     fi
     rmdir "$old/bin" 2>/dev/null || true
@@ -115,9 +118,21 @@ fi
 mkdir -p "$HOME/.local"
 relocate "$HOME/.local/share" "$BIG/share"
 relocate "$HOME/.cache"       "$BIG/cache"
+# krew's store (binary, index clone, every plugin) is KREW_ROOT, set to $BIG/krew
+# for every script and shell here; move across whatever an earlier run left in ~.
+[ -d "$HOME/.krew" ] && relocate "$HOME/.krew" "$BIG/krew"
 
-# mise's own binary is ~130 MB, far too big for a small home, and chezmoi does
-# not manage it, so it lives on the big filesystem with a link from ~/.local/bin.
+# Any large real file in ~/.local/bin (chezmoi from the bootstrap, a mise put
+# there by hand) belongs on the big filesystem too, linked from where it was.
+# The chezmoi-managed helpers are a few KB each and stay as they are. Moving a
+# binary that is running right now is safe on Linux: the process keeps its inode.
 mkdir -p "$BIG/bin" "$HOME/.local/bin"
+for f in "$HOME/.local/bin"/*; do
+  [ -f "$f" ] && [ ! -L "$f" ] || continue
+  [ "$(wc -c < "$f")" -gt 1048576 ] || continue
+  n=$(basename "$f")
+  mv -f "$f" "$BIG/bin/$n" && ln -sfn "$BIG/bin/$n" "$f" \
+    && echo ">>> bigdisk: parked $n on $BIG/bin (linked from ~/.local/bin)"
+done
 {{ end -}}
 {{- end -}}

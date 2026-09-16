@@ -13,16 +13,21 @@ if grep -q "$(printf '\r')" "$0" 2>/dev/null; then tr -d '\r' < "$0" > "$0.lf" &
 #   sh bootstrap.sh --chezmoi-only       just install chezmoi
 #   sh bootstrap.sh --repo USER/REPO     apply someone else's fork
 #   sh bootstrap.sh --version v2.72.2    pin an exact chezmoi release
+#   sh bootstrap.sh --bigdisk DIR        home is small: put chezmoi and all temp
+#                                        files on DIR (a directory you own on a
+#                                        larger filesystem). Give the same DIR
+#                                        when chezmoi asks for "bigdisk".
 set -eu
 
 REPO_DEFAULT="junior/dotfiles"
 CHEZMOI_REPO="twpayne/chezmoi"
 PINNED="v2.72.2"
 
-REPO=$REPO_DEFAULT; ONLY=0; VER=$PINNED
+REPO=$REPO_DEFAULT; ONLY=0; VER=$PINNED; BIG=""
 while [ $# -gt 0 ]; do
   case $1 in
     --chezmoi-only) ONLY=1 ;;
+    --bigdisk)      BIG=${2:?--bigdisk needs a directory}; shift ;;
     --repo)         REPO=${2:?--repo needs USER/REPO}; shift ;;
     --version)      VER=${2:?--version needs a tag}; shift ;;
     -h|--help)      sed -n '/^# bootstrap.sh/,/^$/p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -49,8 +54,16 @@ NUM=${VER#v}
 SUMS="chezmoi_${NUM}_checksums.txt"
 BASE="https://github.com/$CHEZMOI_REPO/releases/download/$VER"
 
+if [ -n "$BIG" ]; then
+  mkdir -p "$BIG/bin" "$BIG/tmp" 2>/dev/null || die "cannot create $BIG/bin and $BIG/tmp"
+  [ -w "$BIG/tmp" ] || die "$BIG is not writable"
+  chmod 700 "$BIG" 2>/dev/null || true
+  TMPDIR="$BIG/tmp"; export TMPDIR         # every download and unpack from here on
+fi
 tmp=$(mktemp -d) || die "cannot create a temp directory"
 trap 'rm -rf "$tmp"' EXIT INT TERM
+DEST="$HOME/.local/bin/chezmoi"
+REAL=$DEST; [ -n "$BIG" ] && REAL="$BIG/bin/chezmoi"
 
 fetch() {
   code=$(curl -fsSL --connect-timeout 10 --max-time 300 -w '%{http_code}' -o "$2" "$1" 2>"$tmp/err") || {
@@ -94,15 +107,16 @@ for LIBC in musl glibc; do
   # the kernel fails the executable test even for a 0755 file.
   [ -f "$tmp/x/chezmoi" ] || die "unexpected archive layout: no chezmoi inside $ASSET"
   mkdir -p "$HOME/.local/bin"
-  cp "$tmp/x/chezmoi" "$HOME/.local/bin/chezmoi.new"
-  chmod 755 "$HOME/.local/bin/chezmoi.new"
-  if err=$("$HOME/.local/bin/chezmoi.new" --version 2>&1); then
-    mv -f "$HOME/.local/bin/chezmoi.new" "$HOME/.local/bin/chezmoi"
+  cp "$tmp/x/chezmoi" "$REAL.new"
+  chmod 755 "$REAL.new"
+  if err=$("$REAL.new" --version 2>&1); then
+    mv -f "$REAL.new" "$REAL"
+    [ "$REAL" = "$DEST" ] || ln -sfn "$REAL" "$DEST"
     installed=$LIBC
     note "installed ($LIBC): $(printf '%s' "$err" | head -1 | cut -c1-60)"
     break
   fi
-  rm -f "$HOME/.local/bin/chezmoi.new"
+  rm -f "$REAL.new"
   note "the $LIBC build will not run here: $(printf '%s' "$err" | head -1 | cut -c1-80)"
 done
 [ -n "$installed" ] || die "no published chezmoi build runs on this host"
@@ -110,9 +124,12 @@ done
 case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) PATH="$HOME/.local/bin:$PATH"; export PATH ;; esac
 
 # chezmoi runs its scripts from a temp dir; /tmp is noexec on hardened hosts, so
-# give both chezmoi and anything it calls a directory that permits execution.
-mkdir -p "$HOME/.chezmoi-tmp"
-TMPDIR="$HOME/.chezmoi-tmp"; export TMPDIR
+# give it a directory that permits execution. With --bigdisk that is already the
+# big filesystem; otherwise a small directory under $HOME (fine for script files).
+if [ -z "$BIG" ]; then
+  mkdir -p "$HOME/.chezmoi-tmp"
+  TMPDIR="$HOME/.chezmoi-tmp"; export TMPDIR
+fi
 
 if [ "$ONLY" = 1 ]; then
   echo
