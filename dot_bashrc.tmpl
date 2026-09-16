@@ -165,6 +165,106 @@ for _f in "$HOME/.config/bash/local.d"/*.bash; do
 done
 unset _f
 
+# --- keeping it current --------------------------------------------------------
+# up: pull the dotfiles, regenerate the config (a changed config template needs
+# `chezmoi init`, which `chezmoi update` alone does not do), apply, then bring the
+# tools up to date. mise itself is NOT self-updated here: its version is pinned in
+# the dotfiles and the installer would put the pin back; bump the pin instead.
+up() {
+  local src; src=$(chezmoi source-path 2>/dev/null) || { echo "up: chezmoi is not set up here" >&2; return 1; }
+  if command -v git >/dev/null 2>&1 && [ -d "$src/.git" ]; then
+    echo "== dotfiles: pull"
+    chezmoi git pull -- --ff-only || return
+  else
+    echo "== dotfiles: no git on this host, applying the source as it stands (refresh it over tx)"
+  fi
+  echo "== dotfiles: regenerate config + apply"
+  chezmoi init --apply || return
+  if [ -d ~/.local/share/dotfiles-overlay/.git ]; then       # private layer, where present
+    local _ovhost
+    _ovhost=$(git -C ~/.local/share/dotfiles-overlay remote get-url origin 2>/dev/null       | sed -E 's#^[a-z]+://##; s#^[^@]*@##; s#[:/].*##')
+    if [ -n "$_ovhost" ] && getent hosts "$_ovhost" >/dev/null 2>&1; then
+      echo "== overlay"
+      GIT_SSH_COMMAND='ssh -o ConnectTimeout=5 -o BatchMode=yes'         git -C ~/.local/share/dotfiles-overlay pull --rebase --autostash         && ~/.local/share/dotfiles-overlay/install.sh
+    else
+      echo "up: overlay host '${_ovhost:-?}' unreachable, skipping"
+    fi
+  fi
+  if command -v mise >/dev/null 2>&1; then
+    echo "== tools: mise"
+    mise install -y && mise upgrade -y && mise prune -y
+  fi
+  if command -v kubectl-krew >/dev/null 2>&1; then
+    echo "== tools: kubectl plugins"
+    kubectl krew upgrade || true
+  fi
+  tools
+  footprint
+  echo "up: done. Run 'exec bash -l' if dotfiles changed."
+}
+
+# tools: the toolchain by category, read from the same "# --- Category ---"
+# headers that TOOLS.md is generated from.
+tools() {
+  local cfg=()
+  [ -r ~/.config/mise/config.toml ] && cfg+=(~/.config/mise/config.toml)
+  [ ${#cfg[@]} -gt 0 ] || { echo "tools: no mise config found" >&2; return 1; }
+  awk '
+    FNR == 1 { cat = "" }
+    /^#[[:space:]]*---/ {
+      line = $0
+      sub(/^#[[:space:]]*---[[:space:]]*/, "", line)
+      sub(/[[:space:]]*---[[:space:]]*$/, "", line)
+      cat = line
+      if (!(cat in seen)) { seen[cat] = 1; order[++k] = cat }
+      next
+    }
+    cat == "" { next }
+    /^"?[A-Za-z0-9_.:@\/+-]+"?[[:space:]]*=[[:space:]]*[{"]/ { n[cat]++ }
+    END {
+      for (i = 1; i <= k; i++) {
+        c = order[i]
+        if (n[c] > 0) { total += n[c]; printf "  %-38s %3d\n", c, n[c] }
+      }
+      printf "  %-38s %3d\n", "total (mise)", total
+    }
+  ' "${cfg[@]}"
+  if command -v kubectl-krew >/dev/null 2>&1; then
+    local kp; kp=$(kubectl krew list 2>/dev/null | grep -vcE '^(PLUGIN|krew$)' || true)   # krew lists itself
+    [ "${kp:-0}" -gt 0 ] && printf '  %-38s %3d\n' "kubectl plugins (krew)" "$kp"
+  fi
+  echo "  + kubectl/helm and whatever else the host itself provides"
+}
+
+# footprint: what this setup occupies, and where. du follows nothing, so a
+# symlink counts as a symlink and only real files show up under "left in ~".
+footprint() {
+  local total=0
+  _fp() {
+    local label=$1 k=0 p; shift
+    for p in "$@"; do [ -e "$p" ] || [ -L "$p" ] || continue; k=$((k + $(du -sk "$p" 2>/dev/null | awk '{s+=$1} END{print s+0}'))); done
+    total=$((total + k)); printf '  %-32s %8.1f MB\n' "$label" "$(awk -v k="$k" 'BEGIN{printf "%.1f", k/1024}')"
+  }
+  echo "footprint:"
+{{ if $big -}}
+  _fp "mise: binary + tools"          "{{ $big }}/bin/mise" "{{ $big }}/share/mise"
+  _fp "chezmoi: binary + source"      "{{ $big }}/bin/chezmoi" "{{ $big }}/share/chezmoi"
+  _fp "kubectl plugins (krew)"        "{{ $big }}/krew"
+  _fp "caches (mise, kubectl, tmp)"   "{{ $big }}/cache" "{{ $big }}/kube-cache" "{{ $big }}/tmp"
+  _fp "state + history"               "{{ $big }}/state"
+  _fp "left in ~ (config, helpers)"   ~/.local/bin ~/.config ~/.chezmoi-tmp ~/.bashrc ~/.bash_profile ~/.tmux.conf ~/.inputrc ~/.vimrc
+{{- else }}
+  _fp "mise: binary + tools"          ~/.local/bin/mise ~/.local/share/mise
+  _fp "chezmoi: binary + source"      ~/.local/bin/chezmoi ~/.local/share/chezmoi
+  _fp "kubectl plugins (krew)"        ~/.krew
+  _fp "caches"                        ~/.cache
+  _fp "config + helpers"              ~/.config ~/.chezmoi-tmp ~/.bashrc ~/.bash_profile ~/.tmux.conf ~/.inputrc ~/.vimrc
+{{- end }}
+  printf '  %-32s %8.1f MB\n' "total" "$(awk -v k="$total" 'BEGIN{printf "%.1f", k/1024}')"
+  printf '  home filesystem: %s free\n' "$(df -h ~ 2>/dev/null | awk 'NR==2{print $4}')"
+  unset -f _fp
+}
+
 # --- what did this give me? --------------------------------------------------
 jhelp() {
   cat <<'H'
@@ -179,6 +279,8 @@ this profile
   history         Up/Down search on what you typed; Ctrl-R fuzzy (fzf)
   tools           mise use -g NAME@latest   (mise ls, mise upgrade)
   completions     load on first TAB
+  keep current    up          (pull, apply, upgrade tools)
+  sizes           footprint   what lives where, in MB;  tools  by category
 H
 }
 {{- end -}}

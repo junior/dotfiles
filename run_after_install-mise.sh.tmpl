@@ -3,8 +3,14 @@
 # tools-category: Tool manager
 # tools-installs: mise
 # Install mise into ~/.local/bin, checksum-verified, then install whatever
-# ~/.config/mise/config.toml asks for. No root, no package manager, nothing
-# piped into a shell. Re-runs when the pinned version below changes.
+# ~/.config/mise/config.toml asks for and regenerate bash completions. No root,
+# no package manager, nothing piped into a shell.
+#
+# Runs on EVERY apply on purpose (plain run_, not run_onchange_): the download
+# happens only when the pinned version below differs from what is installed,
+# `mise install` is a no-op when nothing is missing, and the completion files
+# are cheap, so a routine apply costs about a second. An onchange script would
+# never notice a tool added to config.toml, and `up` relies on this reconciling.
 #
 # mise version: {{ $miseVersion := "v2026.9.9" }}{{ $miseVersion }}
 set -eu
