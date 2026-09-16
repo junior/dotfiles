@@ -198,7 +198,10 @@ What it does differently:
 - **Terminal comforts that survive ssh and tmux:** Up/Down search history by
   what you typed, Ctrl-R fuzzy history, a prompt with the current kube context,
   `oscopy` to put output on the clipboard of the machine you are sitting at,
-  `tmux-tidy` for stray sessions, and `jhelp` to list all of it.
+  `tmux-tidy` for stray sessions, and `jhelp` to list all of it. eza's file
+  and folder icons are Nerd Font glyphs: the host just emits them, the terminal
+  you sit at needs a Nerd Font to draw them. Without one, put an `ls` alias
+  without `--icons` in `~/.config/bash/local.bash`, which is sourced last.
 
 Daily use is one command, `up`: pull, regenerate the config, apply, sync the
 private overlay if present, update mise tools and krew plugins, then print the
