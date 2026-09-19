@@ -147,6 +147,7 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | Tool | What it is |
 | --- | --- |
 | [1password](https://1password.com/) | Password manager that keeps all passwords secure behind one password |
+| [1password-cli](https://developer.1password.com/docs/cli) | Command-line interface for 1Password |
 | [discord](https://discord.com/) | Voice and text chat software |
 | [microsoft-teams](https://www.microsoft.com/en/microsoft-teams/group-chat-software/) | Meet, chat, call, and collaborate in just one place |
 | [notion](https://www.notion.com/) | App to write, plan, collaborate, and get organised |

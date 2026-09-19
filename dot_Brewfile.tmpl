@@ -117,6 +117,12 @@ cask "stratoshark"
 # --- Casks: communication + productivity ---
 # 1Password: the direct-download build (not the App Store one), adopted in place.
 cask "1password"
+# The CLI (`op`). Needed for the secrets plan: chezmoi `onepasswordRead` in templates so
+# ~/.aws and the s3tx exports stop being hand-carried, and it is what makes a new Mac
+# reproducible rather than hand-built. Two things stay manual in the app, they are GUI
+# toggles: Settings > Developer > "Integrate with 1Password CLI", and the SSH agent.
+# Not pinned: this cask has no auto_updates, `brew upgrade --cask` in `up` moves it.
+cask "1password-cli"
 cask "discord"
 cask "microsoft-teams"
 cask "notion"
