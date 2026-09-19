@@ -281,6 +281,7 @@ up() {
       echo "up: overlay host '${_ovhost:-?}' unreachable — skipping overlay sync (VPN down or corp access blocked?)"
     fi
   fi
+  local _cc_before=$(brew list --cask --versions claude-code@latest 2>/dev/null)
   if command -v brew &>/dev/null; then
     # `brew bundle` prints one "Using <x>" line per already-satisfied entry —
     # over a hundred lines that say nothing happened. Keep everything it did do,
@@ -307,6 +308,21 @@ up() {
         | jq -r 'keys[]? | select(startswith("http:"))' 2>/dev/null)
   mise install && mise upgrade "${_mise_skip[@]}" && mise prune
   tools
+  # A Mac that hosts Claude Code Remote Control from a launchd job runs the `claude`
+  # binary as a long-lived process. `brew upgrade --cask` above swaps
+  # that binary underneath it: the server keeps the old code in memory while every
+  # session it spawns from then on runs the new one. Restart the job, but only when
+  # the cask really changed and only if the job is loaded on this machine. Last step
+  # on purpose: when `up` itself runs inside a Remote Control session the restart
+  # ends that session, so everything else must already be finished.
+  if [[ -n "$_cc_before" ]]; then
+    local _cc_after=$(brew list --cask --versions claude-code@latest 2>/dev/null)
+    local _rc="gui/$UID/${CLAUDE_RC_LABEL:-local.claude-remote-control}"
+    if [[ "$_cc_after" != "$_cc_before" ]] && launchctl print "$_rc" &>/dev/null; then
+      echo "up: claude-code ${_cc_before##* } -> ${_cc_after##* }: restarting the Remote Control server${CLAUDECODE:+ (this session is hosted by it and will drop; reconnect in about 30s)}"
+      launchctl kickstart -k "$_rc"
+    fi
+  fi
   echo "up: done — run 'exec zsh' if dotfiles changed"
 }
 
