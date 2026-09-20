@@ -19,7 +19,15 @@
        names change: the structure lives here, the addresses live in your own config. */ -}}
 {{- $labHosts := "" -}}
 {{- if eq $machine "mac-personal" -}}
-{{-   $labHosts = promptStringOnce . "lab_hosts" "Lab machines reachable over ssh, comma-separated alias=hostname pairs (e.g. imac=some-host.localdomain). Blank for none" "" -}}
+{{-   $labHosts = promptStringOnce . "lab_hosts" "Lab machines reachable over ssh, comma-separated alias:hostname pairs, for example imac:some-host.localdomain. Blank for none" "" -}}
+{{- end -}}
+{{- range (splitList "," $labHosts) -}}
+{{-   $e := trim . -}}
+{{-   if $e -}}
+{{-     if ne (len (splitList ":" $e)) 2 -}}
+{{-       fail (printf "malformed lab_hosts entry %s. Expected comma-separated alias:hostname pairs, for example imac:some-host.localdomain. A malformed entry would otherwise be skipped silently and the host would simply not resolve." $e) -}}
+{{-     end -}}
+{{-   end -}}
 {{- end -}}
 {{- $knownRoles := list "session-host" "docker-engine" "secrets" -}}
 {{- $roleList := list -}}
@@ -70,7 +78,7 @@ scriptTempDir = {{ (printf "%s/.chezmoi-tmp" .chezmoi.homeDir) | quote }}
     # installs, state and shell history go to it instead of filling $HOME.
     # Blank keeps the normal layout, which is what a Pi or a NUC wants.
     bigdisk = {{ $bigdisk | quote }}
-    # Lab machines reachable over ssh, "alias=hostname" pairs, comma-separated.
+    # Lab machines reachable over ssh, "alias:hostname" pairs, comma-separated.
     # Consumed by ~/.ssh/config.d/lab. Blank means that fragment is not applied.
     lab_hosts = {{ $labHosts | quote }}
     # What this machine DOES. A TOML array, so templates ask `has "session-host" .roles`.

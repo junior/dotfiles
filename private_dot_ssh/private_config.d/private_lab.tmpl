@@ -3,7 +3,7 @@
 # ~/.ssh/config.d/lab — managed by chezmoi. Do not edit here.
 #
 # Generated from the `lab_hosts` value in ~/.config/chezmoi/chezmoi.toml, as
-# "alias=hostname" pairs. The addresses are deliberately NOT in the dotfiles
+# "alias:hostname" pairs. The addresses are deliberately NOT in the dotfiles
 # repo, which is public. To add, rename or move a machine, change that value
 # and re-apply; nothing in the repo needs touching.
 #
@@ -11,7 +11,7 @@
 # run_after_ensure-ssh-include.sh adds if it is missing. Include must be the
 # FIRST line there, because ssh keeps the first value it sees for each keyword.
 {{ range $i, $entry := splitList "," $lab -}}
-{{- $pair := splitList "=" (trim $entry) -}}
+{{- $pair := splitList ":" (trim $entry) -}}
 {{- if eq (len $pair) 2 }}
 Host {{ trim (index $pair 0) }}
     HostName     {{ trim (index $pair 1) }}

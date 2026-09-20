@@ -260,8 +260,53 @@ alias localip='ipconfig getifaddr en0'
 {{- end }}
 
 # --- Update everything: dotfiles -> packages -> tools (same command on both machines) ---
+# Show the prompted values this machine actually has. chezmoi warns when
+# .chezmoi.toml.tmpl has changed upstream and the local config was generated
+# from an older copy; answering `chezmoi init` from memory is how a machine ends
+# up with a wrong value. It cannot lose an existing one -- every prompt uses a
+# *Once helper, so an answer already present is REUSED WITHOUT ASKING and only
+# genuinely new fields are asked -- but seeing the current set is what makes a
+# new answer consistent with the rest.
+chezconf() {
+  local _d
+  _d=$(chezmoi data --format=json 2>/dev/null) || { echo "chezconf: chezmoi data failed" >&2; return 1 }
+  if command -v jq &>/dev/null; then
+    print -r -- "$_d" | jq -r '
+      def s(x): if ((x // "") | tostring) == "" then "(none)" else (x | tostring) end;
+      "machine     = \(s(.machine))",
+      "roles       = \(if ((.roles // []) | length) == 0 then "(none)" else ((.roles) | join(", ")) end)",
+      "lab_hosts   = \(s(.lab_hosts))",
+      "signingkey  = \(s(.signingkey))",
+      "corp_ca_url = \(s(.corp_ca_url))",
+      "bigdisk     = \(s(.bigdisk))",
+      "extras      = \(s(.extras))"'
+  else
+    print -r -- "$_d"          # no jq: raw is still better than nothing
+  fi
+  echo
+  echo "To CHANGE one of these, edit ~/.config/chezmoi/chezmoi.toml directly."
+  echo "A *Once prompt will not ask again for a field that already has a value."
+}
+
 up() {
-  chezmoi update || return            # pull manifests first; new tools arrive here
+  # Keep chezmoi's stderr visible, but also look at it: the "config file
+  # template has changed" warning is the moment you need to see your current
+  # answers, not three commands later.
+  local _cmerr; _cmerr=$(mktemp)
+  chezmoi update 2>"$_cmerr" || { cat "$_cmerr" >&2; rm -f "$_cmerr"; return 1 }
+  cat "$_cmerr" >&2
+  if grep -q 'config file template has changed' "$_cmerr" 2>/dev/null; then
+    echo
+    echo "up: the chezmoi config template changed upstream, so this machine's config"
+    echo "    was generated from an older copy. Existing answers are SAFE: chezmoi"
+    echo "    reuses every value already set and asks only about new fields."
+    echo "    What this machine has right now:"
+    echo
+    chezconf | sed 's/^/      /'
+    echo "    Then run:  chezmoi init          (or 'chezmoi init --apply')"
+    echo
+  fi
+  rm -f "$_cmerr"
   # Sync the private overlay if present (work machines only): pull + re-link
   # fragments so conf.d / gitconfig.local / ssh are current before mise reads them.
   if [[ -d ~/.local/share/dotfiles-overlay/.git ]]; then
