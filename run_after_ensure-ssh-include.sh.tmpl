@@ -1,0 +1,38 @@
+{{- $lab := "" -}}{{- if hasKey . "lab_hosts" }}{{ $lab = .lab_hosts }}{{ end -}}
+{{ if and (eq .machine "mac-personal") $lab -}}
+#!/usr/bin/env bash
+# ~/.ssh/config stays UNMANAGED on the Macs: it holds personal host entries
+# (GitHub, and others) that should not be templated into a public repo. But the
+# lab fragment chezmoi does manage is useless unless something pulls it in, so
+# this makes sure the Include line is there, and nothing else.
+#
+# Include must be FIRST: ssh keeps the first value it sees for each keyword, so
+# an Include placed after a `Host *` block would lose to it.
+#
+# A plain run_ script, not run_onchange_: it is one grep when there is nothing to
+# do, and an onchange script that skipped because ~/.ssh did not exist yet would
+# record itself as done and never retry. QUIET BY DESIGN, prints only on change.
+set -eu
+
+cfg="$HOME/.ssh/config"
+line='Include ~/.ssh/config.d/*'
+
+mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+
+if [ ! -e "$cfg" ]; then
+  printf '%s\n' "$line" > "$cfg"
+  chmod 600 "$cfg"
+  echo ">>> ssh: created ~/.ssh/config with the config.d include"
+  exit 0
+fi
+
+if grep -qF "$line" "$cfg"; then
+  exit 0                      # already there, stay silent
+fi
+
+cp -p "$cfg" "$cfg.before-include.$(date +%Y%m%d%H%M%S)"
+tmp=$(mktemp) && trap 'rm -f "$tmp"' EXIT
+{ printf '%s\n\n' "$line"; cat "$cfg"; } > "$tmp"
+cat "$tmp" > "$cfg"           # preserve the original inode and mode
+echo ">>> ssh: added '$line' to the top of ~/.ssh/config (backup kept alongside)"
+{{ end -}}
