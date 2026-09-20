@@ -106,7 +106,14 @@ cask "tor-browser"
 # wifiman installs via pkg (one sudo prompt the first time); wireshark-app is the
 # GUI (the `wireshark` formula is the CLI-only build) and ships a ChmodBPF pkg.
 cask "wifiman"
-cask "wireshark-app"
+# Wireshark is deliberately NOT declared. The `wireshark-app` cask installs two pkgs
+# besides the app: "Add Wireshark to the system path" and "Install ChmodBPF", the latter
+# a ROOT LaunchDaemon that chmods /dev/bpf* at every boot so non-root processes can
+# capture. That is a persistent, admin-level change to how the machine handles packet
+# capture, and it is not something a new Mac should acquire silently. Wireshark is an
+# on-demand tool here: install it by hand when a capture is actually needed
+#   brew install --cask wireshark-app
+# or better, capture inside a container on a lab node and leave the Mac untouched.
 
 # --- Casks: containers + Kubernetes UIs ---
 cask "docker-desktop"
@@ -163,7 +170,6 @@ cask "claude"
 cask "claude-code@latest"
 cask "codex"
 cask "grammarly-desktop"
-cask "licecap"
 cask "microsoft-auto-update"
 {{- if eq .chezmoi.arch "arm64" }}
 # Apple-silicon-only casks (their upstream ships no Intel build), gated on the

@@ -131,7 +131,6 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | Tool | What it is |
 | --- | --- |
 | [wifiman](https://wifiman.com/) | Network monitoring and troubleshooting tool |
-| [wireshark-app](https://www.wireshark.org/) | Network protocol analyzer |
 
 ### Casks: containers + Kubernetes UIs
 
@@ -184,7 +183,6 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | [claude-code@latest](https://claude.com/product/claude-code) | Terminal-based AI coding assistant |
 | [codex](https://github.com/openai/codex) | OpenAI's coding agent that runs in your terminal |
 | [grammarly-desktop](https://www.grammarly.com/desktop) | Grammarly for desktop |
-| [licecap](https://www.cockos.com/licecap/) | Animated screen capture application |
 | [microsoft-auto-update](https://docs.microsoft.com/officeupdates/release-history-microsoft-autoupdate) | Provides updates to various Microsoft products |
 | [sbx](https://github.com/docker/sbx-releases) | Build, run, and govern agents across the software development lifecycle |
 | [lm-studio](https://lmstudio.ai/) | Discover, download, and run local LLMs |
