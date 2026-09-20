@@ -44,7 +44,12 @@ bootstrap.sh
 {{- end }}
 {{ $lab := "" }}{{ if hasKey . "lab_hosts" }}{{ $lab = .lab_hosts }}{{ end }}
 {{ if not $lab -}}
-# The lab ssh fragment is generated from `lab_hosts` in the chezmoi config;
-# with nothing declared there is nothing to write.
+# The lab ssh fragment is generated from `lab_hosts` in the chezmoi config; with
+# nothing declared there is nothing to write. Ignore the DIRECTORY and the script
+# as well as the file: ignoring only the file still left chezmoi creating an empty
+# ~/.ssh/config.d and managing a script that renders to nothing, which is clutter
+# on hosts that will never have a lab host (the jumphosts have tiny homes).
+.ssh/config.d
 .ssh/config.d/lab
+ensure-ssh-include.sh
 {{- end }}
