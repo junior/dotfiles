@@ -1,0 +1,23 @@
+{{- $roles := list -}}{{- if hasKey . "roles" }}{{ $roles = .roles }}{{ end -}}
+{{- if has "docker-engine" $roles -}}
+# ~/.zshenv — managed by chezmoi (role: docker-engine).
+#
+# zsh reads THIS file on every invocation, including the `zsh -c "<command>"` that
+# sshd runs for `ssh host <command>`. Neither .zshrc nor .zprofile is read there,
+# which is why the fix cannot live in either of them.
+#
+# macOS builds the default PATH with path_helper, run from /etc/profile, and only
+# LOGIN shells source that. So a non-interactive ssh command arrives with
+#   PATH=/usr/bin:/bin:/usr/sbin:/sbin
+# and no Homebrew prefix. `docker context` over ssh then dies with
+#   command not found: docker
+# from its `docker system dial-stdio` call, which is exactly how a remote engine
+# stops working for reasons that have nothing to do with Docker. Found 2026-09-20.
+#
+# Keep this file minimal and free of side effects: it runs for every zsh, scripts
+# included. PATH only, nothing interactive, no output.
+for _p in /opt/homebrew/bin /usr/local/bin; do
+  [[ -d "$_p" && ":$PATH:" != *":$_p:"* ]] && export PATH="$_p:$PATH"
+done
+unset _p
+{{ end -}}

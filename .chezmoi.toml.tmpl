@@ -5,6 +5,33 @@
 {{- $machine := promptChoiceOnce . "machine" "Which machine is this" (list "mac-personal" "wsl-work" "linux-minimal") -}}
 {{- $signingkey := promptStringOnce . "signingkey" "OpenPGP signing key fingerprint, blank for none" "" -}}
 {{- $corpCaURL := promptStringOnce . "corp_ca_url" "Extra CA bundle URL for TLS-inspecting networks, blank for none" "" -}}
+{{- /* Roles say what this machine DOES, as opposed to `machine`, which says what kind of
+       setup it has. Four Macs can share the mac-personal profile and still differ on whether
+       they host long-lived sessions or run an engine other machines build on. Roles are used
+       rather than machine names because a role MOVES: when the desktop is down, session
+       hosting shifts to the laptop by editing one line here, not by touching templates. */ -}}
+{{- $roles := "" -}}
+{{- if eq $machine "mac-personal" -}}
+{{-   $roles = promptStringOnce . "roles" "Roles for this machine, comma-separated. Available: session-host (hosts long-lived Claude Code sessions), docker-engine (runs a Docker engine other machines build on), secrets (holds credentials provisioned from 1Password). Blank for none" "" -}}
+{{- end -}}
+{{- /* Lab machines this one reaches over ssh, as alias=hostname pairs. Kept as a prompt
+       because this repo is PUBLIC and home addresses do not belong in it, and because the
+       names change: the structure lives here, the addresses live in your own config. */ -}}
+{{- $labHosts := "" -}}
+{{- if eq $machine "mac-personal" -}}
+{{-   $labHosts = promptStringOnce . "lab_hosts" "Lab machines reachable over ssh, comma-separated alias=hostname pairs (e.g. imac=some-host.localdomain). Blank for none" "" -}}
+{{- end -}}
+{{- $knownRoles := list "session-host" "docker-engine" "secrets" -}}
+{{- $roleList := list -}}
+{{- range (splitList "," $roles) -}}
+{{-   $r := trim . -}}
+{{-   if $r -}}
+{{-     if not (has $r $knownRoles) -}}
+{{-       fail (printf "unknown role %s. Known roles: %s. A typo here silently does nothing, which is why this stops instead. Fix the roles line in ~/.config/chezmoi/chezmoi.toml, or re-run 'chezmoi init' and answer again." $r (join ", " $knownRoles)) -}}
+{{-     end -}}
+{{-     $roleList = append $roleList $r -}}
+{{-   end -}}
+{{- end -}}
 {{- $bigdisk := "" -}}
 {{- $extras := "" -}}
 {{- if eq $machine "linux-minimal" -}}
@@ -43,6 +70,15 @@ scriptTempDir = {{ (printf "%s/.chezmoi-tmp" .chezmoi.homeDir) | quote }}
     # installs, state and shell history go to it instead of filling $HOME.
     # Blank keeps the normal layout, which is what a Pi or a NUC wants.
     bigdisk = {{ $bigdisk | quote }}
+    # Lab machines reachable over ssh, "alias=hostname" pairs, comma-separated.
+    # Consumed by ~/.ssh/config.d/lab. Blank means that fragment is not applied.
+    lab_hosts = {{ $labHosts | quote }}
+    # What this machine DOES. A TOML array, so templates ask `has "session-host" .roles`.
+    # Set only on mac-personal today; other profiles carry an empty list.
+    #   session-host  hosts long-lived Claude Code sessions (launchd job, `up` bounces it)
+    #   docker-engine runs a Docker engine other machines reach over ssh
+    #   secrets       holds credentials provisioned from 1Password
+    roles = [{{ range $i, $r := $roleList }}{{ if $i }}, {{ end }}{{ $r | quote }}{{ end }}]
     # linux-minimal only. Optional groups this host should also get, comma-separated.
     # krew: kubectl plugin manager and the plugin list (needs git).
     # blesh: ble.sh, fish-style autosuggestions and highlighting in bash.

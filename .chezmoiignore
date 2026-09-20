@@ -36,3 +36,15 @@ bootstrap.sh
 .gnupg
 .config/kind
 {{- end }}
+{{ $roles := list }}{{ if hasKey . "roles" }}{{ $roles = .roles }}{{ end }}
+{{ if not (has "docker-engine" $roles) -}}
+# Only machines that other machines ssh into need a .zshenv; see the file itself
+# for why the PATH fix cannot live in .zshrc.
+.zshenv
+{{- end }}
+{{ $lab := "" }}{{ if hasKey . "lab_hosts" }}{{ $lab = .lab_hosts }}{{ end }}
+{{ if not $lab -}}
+# The lab ssh fragment is generated from `lab_hosts` in the chezmoi config;
+# with nothing declared there is nothing to write.
+.ssh/config.d/lab
+{{- end }}

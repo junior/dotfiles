@@ -367,11 +367,19 @@ alias myip4='curl -s https://api4.ipify.org'
 alias myip6='curl -s https://api6.ipify.org'
 alias digmyip='dig +short myip.opendns.com @resolver1.opendns.com'
 
-# === Machine-local / overlay shell fragments ===
-# Drop-in zsh files (work aliases, functions, completions) layered in by the
-# private overlay's install.sh. Sourced here — after the core aliases/compdefs,
-# before syntax-highlighting — so fragments can extend or override them.
-# (N) null-glob: no error when the dir is empty/absent; -r skips dangling links.
+# === Role and machine-local shell fragments ===
+# Two layers, both sourced here — after the core aliases/compdefs, before
+# syntax-highlighting — so either can extend or override what is above.
+# (N) null-glob: no error when a dir is empty or absent; -r skips dangling links.
+#
+# role.d: what this MACHINE DOES, from the `roles` list in the chezmoi config.
+# chezmoi drops a role's file on machines without that role, so this loop is
+# usually empty. Sourced FIRST, so local.d below still wins over it.
+for _f in ~/.config/zsh/role.d/*.zsh(N); do [[ -r "$_f" ]] && source "$_f"; done
+unset _f
+
+# local.d: per-machine private override, layered in by the private overlay's
+# install.sh (work aliases, functions, completions). Never chezmoi-managed.
 for _f in ~/.config/zsh/local.d/*.zsh(N); do [[ -r "$_f" ]] && source "$_f"; done
 unset _f
 
