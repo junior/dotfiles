@@ -216,6 +216,41 @@ Leaving is one command. `sh bootstrap.sh --uninstall` shows the plan and
 removed, and the directory on the bigger filesystem is listed for you to delete
 by hand. Nothing you created yourself is touched.
 
+## Machine roles
+
+`machine` says what KIND of setup a box has (`mac-personal`, `wsl-work`,
+`linux-minimal`). It does not say what the box DOES. Several machines can share
+one profile and still differ: one runs always-on agent sessions, another is a
+build engine the others reach over ssh, a third holds credentials.
+
+That is what `roles` is for. It is asked once, on `mac-personal` only, and
+stored as a list in `~/.config/chezmoi/chezmoi.toml`. Pick roles by what the
+machine is FOR, not by what happens to be installed on it:
+
+| role | pick it when | what it turns on |
+| --- | --- | --- |
+| *(blank)* | an ordinary workstation, which is the common case | nothing |
+| `session-host` | the machine runs long-lived agent sessions others connect to | a launchd job, and `up` restarts it after the CLI is upgraded |
+| `docker-engine` | other machines run builds on this one's Docker engine over ssh | `~/.zshenv`, so a non-interactive `ssh host command` can find `docker` |
+| `secrets` | the machine holds credentials provisioned from a password manager | the templates that write those files |
+
+Roles rather than machine names, because **a role moves and a name does not**.
+When the desktop is down, session hosting shifts to the laptop by editing one
+line in a config; nothing in this repo changes.
+
+An unknown role stops `chezmoi init` and names it, because a typo would
+otherwise produce a machine that silently never does the thing.
+
+`chezconf` prints what the current machine has, which is also what `up` shows
+you if chezmoi reports that the config template changed. Existing answers are
+never lost: every prompt reuses a value already present and asks only about
+genuinely new fields. To CHANGE one, edit the config file directly.
+
+Lab machines reachable over ssh are configured next to this, as `lab_hosts`,
+in `alias:hostname` pairs. The hostnames stay in your own config rather than in
+this repo, so a public fork carries the structure and none of your addresses.
+The alias half can hold several names separated by spaces.
+
 ## Work overlay (keeping employer-specific bits private)
 
 This public repo is the **core**. Anything employer-specific — internal tool

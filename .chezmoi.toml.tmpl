@@ -10,9 +10,18 @@
        they host long-lived sessions or run an engine other machines build on. Roles are used
        rather than machine names because a role MOVES: when the desktop is down, session
        hosting shifts to the laptop by editing one line here, not by touching templates. */ -}}
+{{- /* The ANSWER is stored as a string under roles_input; the parsed list is emitted
+       separately as `roles`. They must be DIFFERENT keys: promptStringOnce reads its own
+       key back to decide whether to ask again, and it cannot read a TOML array as a
+       string, so sharing one key made a stored answer invisible to the prompt and it was
+       dropped on the next init. */ -}}
 {{- $roles := "" -}}
-{{- if eq $machine "mac-personal" -}}
-{{-   $roles = promptStringOnce . "roles" "Roles for this machine, comma-separated. Available: session-host (hosts long-lived Claude Code sessions), docker-engine (runs a Docker engine other machines build on), secrets (holds credentials provisioned from 1Password). Blank for none" "" -}}
+{{- if and (not (hasKey . "roles_input")) (hasKey . "roles") -}}
+{{- /* Migration: an earlier version stored only the array. Seed the new key from
+       it so a machine that already answered is never asked a second time. */ -}}
+{{-   $roles = join "," .roles -}}
+{{- else if eq $machine "mac-personal" -}}
+{{-   $roles = promptStringOnce . "roles_input" "Roles for this machine, comma-separated: session-host, docker-engine, secrets. Blank for none, which is the common case. See the Machine roles table in README.md for which to pick" "" -}}
 {{- end -}}
 {{- /* Lab machines this one reaches over ssh, as alias=hostname pairs. Kept as a prompt
        because this repo is PUBLIC and home addresses do not belong in it, and because the
@@ -86,6 +95,9 @@ scriptTempDir = {{ (printf "%s/.chezmoi-tmp" .chezmoi.homeDir) | quote }}
     #   session-host  hosts long-lived Claude Code sessions (launchd job, `up` bounces it)
     #   docker-engine runs a Docker engine other machines reach over ssh
     #   secrets       holds credentials provisioned from 1Password
+    # roles_input is what you typed; `roles` is the parsed list that templates read.
+    # Two keys on purpose: see the comment at the top of this template.
+    roles_input = {{ $roles | quote }}
     roles = [{{ range $i, $r := $roleList }}{{ if $i }}, {{ end }}{{ $r | quote }}{{ end }}]
     # linux-minimal only. Optional groups this host should also get, comma-separated.
     # krew: kubectl plugin manager and the plugin list (needs git).
