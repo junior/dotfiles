@@ -73,6 +73,7 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | [fzf](https://junegunn.github.io/fzf/) | Command-line fuzzy finder written in Go |
 | [gh](https://cli.github.com/) | GitHub command-line tool |
 | [git](https://git-scm.com) | Distributed revision control system |
+| [git-delta](https://dandavison.github.io/delta/) | Syntax-highlighting pager for git and diff output |
 | [git-filter-repo](https://github.com/newren/git-filter-repo) | Quickly rewrite git repository history |
 | [git-lfs](https://git-lfs.com/) | Git extension for versioning large files |
 | [httpie](https://httpie.io/) | User-friendly cURL replacement (command-line HTTP client) |
@@ -150,6 +151,7 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | [discord](https://discord.com/) | Voice and text chat software |
 | [microsoft-teams](https://www.microsoft.com/en/microsoft-teams/group-chat-software/) | Meet, chat, call, and collaborate in just one place |
 | [notion](https://www.notion.com/) | App to write, plan, collaborate, and get organised |
+| [obsidian](https://obsidian.md/) | Knowledge base that works on top of a local folder of plain text Markdown files |
 | [webex](https://www.webex.com/) | Video communication and virtual meeting platform |
 | [zoom](https://www.zoom.us/) | Video communication and virtual meeting platform |
 
