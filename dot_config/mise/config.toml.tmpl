@@ -112,8 +112,10 @@ opentofu = "latest"
 {{- end }}
 
 {{ if eq .machine "linux-minimal" -}}
+{{- $extras := list -}}{{- if hasKey . "extras" -}}{{- $extras = regexSplit "\\s*,\\s*" (trim .extras) -1 -}}{{- end -}}
 # === linux-minimal: a host where you cannot install packages ===
 # Every entry is a single static binary, so none of it needs a runtime or root.
+# The one exception is opt-in: the "python" extra, further down.
 
 # --- Kubernetes / cloud-native ---
 # kubectl and helm are deliberately absent. Where a host already ships them they
@@ -137,4 +139,16 @@ zoxide    = "latest"
 bat       = "latest"
 jq        = "latest"
 yq        = "latest"
+{{- if has "python" $extras }}
+uv        = "latest"   # uv run script.py: a script with its own dependencies, no venv to keep
+
+# --- Languages + runtimes ---
+# Only with the "python" extra, for the same reason kubectl is absent above: mise's
+# shims lead PATH, so `python3`, `pip` and `#!/usr/bin/env python3` become this
+# build for you. The host's own stays at /usr/bin/python3, which is what the
+# distro's packaged tools call. Enterprise distros ship a python3 years out of
+# support (3.6 on EL8), so scripts written today do not even parse there.
+# Precompiled (python.compile = false above): no compiler, no root, about 110 MB.
+python    = "latest"
+{{- end }}
 {{- end }}

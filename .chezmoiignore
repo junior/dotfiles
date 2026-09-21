@@ -32,9 +32,13 @@ bootstrap.sh
 .p10k.zsh
 .Brewfile
 .default-npm-packages
-.default-python-packages
 .gnupg
 .config/kind
+{{ $extras := list }}{{ if hasKey . "extras" }}{{ $extras = regexSplit "\\s*,\\s*" (trim .extras) -1 }}{{ end -}}
+{{ if not (has "python" $extras) -}}
+# mise reads this when it installs a Python, which happens only with that extra.
+.default-python-packages
+{{- end }}
 {{- end }}
 {{ $roles := list }}{{ if hasKey . "roles" }}{{ $roles = .roles }}{{ end }}
 {{ if not (has "docker-engine" $roles) -}}

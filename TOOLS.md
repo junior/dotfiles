@@ -331,7 +331,7 @@ mise from `dot_config/mise/config.toml.tmpl` — no Homebrew on this box — plu
 
 ## linux-minimal
 
-mise from `dot_config/mise/config.toml.tmpl` on a host with no package manager: static binaries only, nothing that needs root, plus the `run_` installers that render for this profile. krew with its plugins, and ble.sh, join only when the `extras` answer at init asks for them.
+mise from `dot_config/mise/config.toml.tmpl` on a host with no package manager: static binaries only, nothing that needs root, plus the `run_` installers that render for this profile. krew with its plugins, ble.sh, and a current Python with uv, join only when the `extras` answer at init asks for them.
 
 ### Kubernetes / cloud-native
 

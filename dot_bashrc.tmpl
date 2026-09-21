@@ -1,5 +1,6 @@
 {{- if eq .machine "linux-minimal" -}}
 {{- $big := "" -}}{{- if hasKey . "bigdisk" }}{{ $big = .bigdisk }}{{ end -}}
+{{- $extras := list -}}{{- if hasKey . "extras" -}}{{- $extras = regexSplit "\\s*,\\s*" (trim .extras) -1 -}}{{- end -}}
 # ~/.bashrc — managed by chezmoi (machine = linux-minimal).
 #
 # A bash profile for hosts where you get a home directory and nothing else: no
@@ -288,6 +289,9 @@ footprint() {
   echo "footprint:"
 {{ if $big -}}
   _fp "mise: binary + tools"          "{{ $big }}/bin/mise" "{{ $big }}/share/mise"
+{{- if has "python" $extras }}
+  _fp "uv: its own pythons + tools"   "{{ $big }}/share/uv"
+{{- end }}
   _fp "chezmoi: binary + source"      "{{ $big }}/bin/chezmoi" "{{ $big }}/share/chezmoi"
   _fp "kubectl plugins (krew)"        "{{ $big }}/krew"
   _fp "caches (mise, kubectl, tmp)"   "{{ $big }}/cache" "{{ $big }}/kube-cache" "{{ $big }}/tmp"
@@ -295,6 +299,9 @@ footprint() {
   _fp "left in ~ (config, helpers)"   ~/.local/bin ~/.config ~/.chezmoi-tmp ~/.bashrc ~/.bash_profile ~/.tmux.conf ~/.inputrc ~/.vimrc
 {{- else }}
   _fp "mise: binary + tools"          ~/.local/bin/mise ~/.local/share/mise
+{{- if has "python" $extras }}
+  _fp "uv: its own pythons + tools"   ~/.local/share/uv
+{{- end }}
   _fp "chezmoi: binary + source"      ~/.local/bin/chezmoi ~/.local/share/chezmoi
   _fp "kubectl plugins (krew)"        ~/.krew
   _fp "caches"                        ~/.cache
@@ -320,6 +327,11 @@ this profile
   autosuggest     grey text after the cursor is ble.sh predicting from history;
                   Right arrow or End accepts it
   tools           mise use -g NAME@latest   (mise ls, mise upgrade)
+{{- if has "python" $extras }}
+  python          python3 and pip are a current build from mise, not the host's
+                  (that one is still /usr/bin/python3). For a script with
+                  dependencies:  uv run --with requests script.py
+{{- end }}
   completions     load on first TAB
   keep current    up          (pull, apply, upgrade tools)
   sizes           footprint   what lives where, in MB;  tools  by category

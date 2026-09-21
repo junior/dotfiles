@@ -89,9 +89,15 @@ COMPDIR="$HOME/.local/share/bash-completion/completions"
 mkdir -p "$COMPDIR"
 PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
 made=""
-for t in mise kubectl oc helm k9s stern kustomize kubectx kubens argocd flux velero; do
+for t in mise kubectl oc helm k9s stern kustomize kubectx kubens argocd flux velero uv; do
   command -v "$t" >/dev/null 2>&1 || continue
-  if "$t" completion bash >"$COMPDIR/.$t.tmp" 2>/dev/null && [ -s "$COMPDIR/.$t.tmp" ]; then
+  case "$t" in
+    uv) gen="generate-shell-completion bash" ;;      # the one tool that names it differently
+    *)  gen="completion bash" ;;
+  esac
+  # $gen is two words on purpose; nothing in it comes from outside this script.
+  # shellcheck disable=SC2086
+  if "$t" $gen >"$COMPDIR/.$t.tmp" 2>/dev/null && [ -s "$COMPDIR/.$t.tmp" ]; then
     if cmp -s "$COMPDIR/.$t.tmp" "$COMPDIR/$t" 2>/dev/null; then
       rm -f "$COMPDIR/.$t.tmp"                       # unchanged: say nothing
     else

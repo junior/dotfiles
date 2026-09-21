@@ -106,7 +106,7 @@ so it cannot list something that is not actually installed.
 | `dot_Brewfile.tmpl` | `~/.Brewfile` | The Mac's entire toolchain, `brew bundle`-able |
 | `dot_config/mise/config.toml.tmpl` | mise config | Languages everywhere; the full CLI toolchain on WSL |
 | `dot_config/kind/*.yaml.tmpl` | kind configs | Cluster presets: default, no-CNI, Calico (iptables/eBPF) |
-| `dot_default-python-packages` | mise | Default pip packages for every Python |
+| `dot_default-python-packages` | mise | Default pip packages for every Python (on linux-minimal only with the `python` extra) |
 | `dot_local/bin/executable_tx` | `~/.local/bin/tx` | curl-only S3 file-transfer client (pairs with [s3tx](https://github.com/junior/s3tx)) |
 | `private_dot_ssh/private_config` | `~/.ssh/config` | WSL-only: overlay include + keepalives for stateful-firewall networks |
 | `run_onchange_install-apt-packages.sh.tmpl` | — | Declarative apt list (WSL) |
@@ -151,7 +151,7 @@ so it cannot list something that is not actually installed.
    `linux-minimal`), then writes `~/.zshrc` or `~/.bashrc`, `~/.gitconfig`, etc.
    linux-minimal asks two more questions: a directory on a bigger filesystem
    for tools and caches (blank keeps everything in `$HOME`), and optional
-   extras (`krew` for kubectl plugins).
+   extras (`krew` for kubectl plugins, `blesh`, `python`).
 3. Reload: `exec zsh`, or `exec bash -l` on linux-minimal.
 
 Forking this for yourself? Grep for `junior` and swap in your own identity,
@@ -205,6 +205,18 @@ What it does differently:
   [ble.sh](https://github.com/akinomyoga/ble.sh), fish-style autosuggestions
   from history (grey text after the cursor, Right arrow accepts) and syntax
   highlighting; it replaces bash's line editing, so it is a choice per host.
+  `python` adds a current Python from mise (a precompiled build, so still no
+  compiler and no root) plus [uv](https://docs.astral.sh/uv/). It exists
+  because enterprise distros ship a `python3` years out of support (3.6 on
+  EL8), where a script written today does not even parse. It is opt-in because
+  mise's shims lead `PATH`: `python3`, `pip` and `#!/usr/bin/env python3`
+  become the new build for you, while the host's own stays at
+  `/usr/bin/python3` for the packaged tools that call it by absolute path.
+  For a script with dependencies, `uv run --with requests script.py` builds a
+  throwaway environment instead of leaving a venv to look after. To add an
+  extra to a host later, edit the `extras` line in
+  `~/.config/chezmoi/chezmoi.toml` and run `up`; a misspelt extra stops the
+  apply with a message rather than silently doing nothing.
 - **Terminal comforts that survive ssh and tmux:** Up/Down search history by
   what you typed, Ctrl-R fuzzy history, a prompt with the current kube context,
   `oscopy` to put output on the clipboard of the machine you are sitting at,

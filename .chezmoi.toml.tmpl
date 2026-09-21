@@ -53,7 +53,18 @@
 {{- $extras := "" -}}
 {{- if eq $machine "linux-minimal" -}}
 {{-   $bigdisk = promptStringOnce . "bigdisk" "Writable dir on a bigger filesystem for tools/caches, blank to keep everything in $HOME" "" -}}
-{{-   $extras = promptStringOnce . "extras" "Optional extras, comma-separated. Available: krew (kubectl plugins, needs git), blesh (fish-style autosuggestions for bash). Blank for none" "" -}}
+{{-   $extras = promptStringOnce . "extras" "Optional extras, comma-separated. Available: krew (kubectl plugins, needs git), blesh (fish-style autosuggestions for bash), python (a current Python plus uv, ahead of the host's python3). Blank for none" "" -}}
+{{- end -}}
+{{- /* Same guard as the roles: an extra is usually added later by editing the config by
+       hand, and a misspelt one would otherwise just not happen. */ -}}
+{{- $knownExtras := list "krew" "blesh" "python" -}}
+{{- range (splitList "," $extras) -}}
+{{-   $e := trim . -}}
+{{-   if $e -}}
+{{-     if not (has $e $knownExtras) -}}
+{{-       fail (printf "unknown extra %s. Known extras: %s. A typo here silently does nothing, which is why this stops instead. Fix the extras line in ~/.config/chezmoi/chezmoi.toml." $e (join ", " $knownExtras)) -}}
+{{-     end -}}
+{{-   end -}}
 {{- end -}}
 
 {{ if eq $machine "linux-minimal" -}}
@@ -102,4 +113,8 @@ scriptTempDir = {{ (printf "%s/.chezmoi-tmp" .chezmoi.homeDir) | quote }}
     # linux-minimal only. Optional groups this host should also get, comma-separated.
     # krew: kubectl plugin manager and the plugin list (needs git).
     # blesh: ble.sh, fish-style autosuggestions and highlighting in bash.
+    # python: a current Python from mise (precompiled, no compiler or root) plus uv.
+    #         mise's shims lead PATH, so `python3` and `pip` become this one for you;
+    #         the host's own stays at /usr/bin/python3.
+    # To add one later: edit this line, then run `up`.
     extras = {{ $extras | quote }}
