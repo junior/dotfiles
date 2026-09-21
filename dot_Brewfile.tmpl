@@ -108,9 +108,17 @@ brew "uv"
 
 {{ if $lab -}}
 # --- Casks: lab node ---
-# Nobody sits at this machine, so it gets the engine and no GUI at all. When
-# that changes (something to fill the screen, a ticker), add it here.
-cask "docker-desktop"
+# Nobody sits at this machine, so it gets no GUI. But "no GUI" is not "no
+# casks": several of these ship a COMMAND-LINE tool and no .app at all, and a
+# box you ssh into wants those as much as any other machine does. The rule is
+# what the cask installs, not how it is packaged.
+cask "docker-desktop"          # the engine, and the reason this machine exists
+cask "claude-code@latest"      # CLI, no .app
+cask "codex"                   # CLI, no .app (chatgpt is the GUI one and stays off)
+cask "ngrok"                   # CLI, no .app
+cask "mitmproxy"               # CLI, no .app
+# Deliberately NOT here: 1password-cli. A lab node is given no credentials, so
+# `op` would have nothing to unlock. If that changes, this is the line to add.
 {{- else }}
 # --- Casks: terminal + editors ---
 cask "cursor"
