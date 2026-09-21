@@ -19,6 +19,15 @@
 # via .zshrc and, on linux-minimal, .bashrc). git is required by krew for its index.
 set -eu
 
+# RE-RUN TRIGGER. chezmoi re-runs an onchange script only when its RENDERED content
+# changes. On a brand-new Mac the first apply happens before Homebrew has installed
+# kubectl and krew, so this script skips below with exit 0 - and is then recorded as
+# done, so the plugins would never install, silently. Rendering the prerequisites
+# into the script makes its content change the moment they appear, and the next
+# apply runs it again. Proven in a sandbox: one run while absent, none while
+# nothing changes, exactly one more when the tool shows up on PATH.
+# kubectl: {{ if lookPath "kubectl" }}present{{ else }}absent{{ end }} / krew: {{ if lookPath "kubectl-krew" }}present{{ else }}absent{{ end }}
+
 PLUGINS=(access-matrix cert-manager deprecations gadget grep)
 
 command -v kubectl >/dev/null 2>&1 || { echo "krew-plugins: kubectl not found — skipping"; exit 0; }

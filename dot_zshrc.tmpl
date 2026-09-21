@@ -33,7 +33,24 @@ fpath+=("${HOMEBREW_PREFIX}/share/zsh/site-functions" "${HOMEBREW_PREFIX}/share/
 # does a real scan and registers ~/.zsh/completions (kubectl, helm, k9s).
 ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump"
 [[ -d ${ZSH_COMPDUMP:h} ]] || mkdir -p ${ZSH_COMPDUMP:h}
+{{- if ne .machine "wsl-work" }}
+# Intel Homebrew lives in /usr/local, whose share/ directories are group-writable
+# BY DESIGN (drwxrwxr-x, group admin). compaudit calls that insecure, and compinit
+# then halts every interactive shell - every ssh login, on a box nobody sits at -
+# to ask whether to continue. Apple-silicon Homebrew (/opt/homebrew) is not
+# group-writable and never trips it, which is why only an Intel Mac shows this.
+# -u accepts those directories. Scoped to that one prefix so no other machine
+# loses the check; chmod would also work but comes back whenever brew recreates
+# a directory, and a prompt that reappears months later on a headless machine is
+# the worse failure.
+if [[ "${HOMEBREW_PREFIX:-}" == /usr/local ]]; then
+  autoload -Uz compinit && compinit -u -d "$ZSH_COMPDUMP"
+else
+  autoload -Uz compinit && compinit -d "$ZSH_COMPDUMP"
+fi
+{{- else }}
 autoload -Uz compinit && compinit -d "$ZSH_COMPDUMP"
+{{- end }}
 autoload -Uz bashcompinit && bashcompinit
 
 if [[ -f "$ZSH_PLUGIN_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh" ]]; then

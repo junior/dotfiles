@@ -74,6 +74,11 @@ brew "fx"
 brew "fzf"
 brew "gh"
 brew "git"
+# delta is what ~/.gitconfig names as core.pager and the interactive diffFilter. It was
+# only ever declared for wsl-work (mise), so on a Mac git was configured to page
+# through a program that was not there. Unnoticed for months because a pager only
+# runs when stdout is a terminal, and most git here runs from tools and GUIs.
+brew "git-delta"
 brew "git-filter-repo"
 brew "git-lfs"
 brew "httpie"
