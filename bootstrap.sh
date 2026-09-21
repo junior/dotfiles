@@ -92,7 +92,17 @@ fi
 
 command -v curl >/dev/null 2>&1 || die "curl is required"
 command -v tar  >/dev/null 2>&1 || die "tar is required"
-[ "$(uname -s)" = Linux ] || die "this bootstrap is for Linux; on a Mac use Homebrew"
+case "$(uname -s)" in
+  Linux)  OS=linux  ;;
+  Darwin) OS=darwin ;;
+  *) die "unsupported operating system: $(uname -s)" ;;
+esac
+
+# --bigdisk relocates tool installs onto a second filesystem, which is a
+# small-home Linux problem. A Mac has one volume and no such split.
+if [ "$OS" = darwin ] && [ -n "$BIG" ]; then
+  die "--bigdisk is for hosts with a tiny home; it has no meaning on macOS"
+fi
 
 case "$(uname -m)" in
   x86_64|amd64)  ARCH=amd64 ;;
@@ -125,7 +135,7 @@ fetch() {
   [ -s "$2" ] || die "empty download: $1"
 }
 
-echo "bootstrap: chezmoi $VER for linux-$ARCH"
+echo "bootstrap: chezmoi $VER for $OS-$ARCH"
 note "downloading $SUMS"; fetch "$BASE/$SUMS" "$tmp/$SUMS"
 
 sha_of() {
@@ -137,11 +147,17 @@ sha_of() {
 # Try the statically linked musl build first. It runs on any libc, whereas the
 # glibc build is compiled against a newer one than enterprise LTS distros ship
 # (chezmoi 2.72 needs GLIBC_2.32; RHEL 8 and Oracle Linux 8 have 2.28).
+# Linux publishes a musl and a glibc build; macOS publishes one per arch, so the
+# loop runs once there. Trying musl first on Linux is deliberate: it is static and
+# runs on any libc, where the glibc build needs a newer one than enterprise LTS
+# distros ship.
+if [ "$OS" = darwin ]; then VARIANTS="darwin"; else VARIANTS="musl glibc"; fi
 installed=""
-for LIBC in musl glibc; do
-  ASSET="chezmoi_${NUM}_linux-${LIBC}_${ARCH}.tar.gz"
+for LIBC in $VARIANTS; do
+  if [ "$OS" = darwin ]; then ASSET="chezmoi_${NUM}_darwin_${ARCH}.tar.gz"
+  else ASSET="chezmoi_${NUM}_linux-${LIBC}_${ARCH}.tar.gz"; fi
   grep -q "$ASSET" "$tmp/$SUMS" 2>/dev/null || { note "no $LIBC build published for $ARCH, skipping"; continue; }
-  note "trying the $LIBC build: $ASSET"
+  note "trying: $ASSET"
   fetch "$BASE/$ASSET" "$tmp/$ASSET"
   want=$(tr -d '\r' < "$tmp/$SUMS" | while read -r h f _r; do
     [ "${f##*/}" = "$ASSET" ] && { printf '%s' "$h"; break; }
@@ -177,7 +193,9 @@ case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) PATH="$HOME/.local/bin:$PATH"; e
 # chezmoi runs its scripts from a temp dir; /tmp is noexec on hardened hosts, so
 # give it a directory that permits execution. With --bigdisk that is already the
 # big filesystem; otherwise a small directory under $HOME (fine for script files).
-if [ -z "$BIG" ]; then
+# ...but only on Linux: macOS does not mount /tmp noexec, so do not leave a
+# stray ~/.chezmoi-tmp on a Mac that has no use for it.
+if [ -z "$BIG" ] && [ "$OS" = linux ]; then
   mkdir -p "$HOME/.chezmoi-tmp"
   TMPDIR="$HOME/.chezmoi-tmp"; export TMPDIR
 fi
@@ -189,12 +207,34 @@ if [ "$ONLY" = 1 ]; then
 fi
 
 echo
-if command -v git >/dev/null 2>&1; then
-  echo "bootstrap: applying $REPO (you will be asked which machine this is)"
-  exec "$HOME/.local/bin/chezmoi" init --apply "$REPO"
-else
+if ! command -v git >/dev/null 2>&1; then
   echo "bootstrap: git is not installed here, so chezmoi cannot clone $REPO."
-  echo "Either install git, or copy the source tree over and apply it directly:"
-  echo "    chezmoi init --apply --source /path/to/dotfiles"
+  if [ "$OS" = darwin ]; then
+    echo "On macOS git comes with the Command Line Tools:"
+    echo "    xcode-select --install        (a GUI prompt; rerun this script after)"
+  else
+    echo "Either install git, or copy the source tree over and apply it directly:"
+    echo "    chezmoi init --apply --source /path/to/dotfiles"
+  fi
   exit 0
 fi
+
+echo "bootstrap: applying $REPO (you will be asked which machine this is)"
+"$HOME/.local/bin/chezmoi" init --apply "$REPO"; rc=$?
+[ "$rc" -eq 0 ] || exit "$rc"
+
+if [ "$OS" = darwin ]; then
+  cat <<'MAC'
+
+bootstrap: your shell is configured, but the packages are not installed yet.
+chezmoi has written ~/.Brewfile; Homebrew is what reads it, and a fresh Mac does
+not have Homebrew. It is deliberately NOT installed here, because its installer
+is a piped shell script and those get run knowingly, not by a bootstrap:
+
+    https://brew.sh          then:  up
+
+`up` picks up ~/.Brewfile and installs everything from there. Until then the
+prompt theme and shell plugins are absent; the shell works, it just looks plain.
+MAC
+fi
+exit 0

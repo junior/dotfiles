@@ -126,13 +126,23 @@ so it cannot list something that is not actually installed.
 
 ## First-time setup
 
-1. Install chezmoi — `brew install chezmoi` (mac) or `mise use -g chezmoi` (WSL).
-   On a host with no package manager, `bootstrap.sh` does it, checksum-verified
-   and without root, then runs step 2 for you:
+1. Install chezmoi. `bootstrap.sh` does it on any machine, checksum-verified and
+   without root, then runs step 2 for you:
    ```sh
    curl -fsSLO https://raw.githubusercontent.com/junior/dotfiles/main/bootstrap.sh
-   sh bootstrap.sh              # add --bigdisk DIR when the home is small
+   sh bootstrap.sh              # add --bigdisk DIR when the home is small (Linux)
    ```
+   Or use a package manager where one already exists: `brew install chezmoi`,
+   `mise use -g chezmoi`. On an Intel Mac prefer the bootstrap: Homebrew has no
+   Intel bottle for chezmoi, so `brew install` compiles it.
+
+   **On a brand-new Mac there is an ordering catch.** Step 2 writes `~/.Brewfile`,
+   and Homebrew is what reads it, but a factory-fresh Mac has no Homebrew. The
+   bootstrap deliberately does not install it, because its installer is a piped
+   shell script and those should be run knowingly. So: bootstrap, then install
+   Homebrew from https://brew.sh by hand, then `up`. Between those steps the
+   shell works but has no prompt theme or plugins, since they come from the
+   Brewfile.
 2. Initialise from this repo:
    ```sh
    chezmoi init --apply https://github.com/junior/dotfiles.git
