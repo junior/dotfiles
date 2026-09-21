@@ -1,6 +1,22 @@
 {{- if eq .machine "mac-personal" -}}
+{{- $lab := false -}}{{- if hasKey . "roles" }}{{ $lab = has "docker-engine" .roles }}{{ end -}}
 # Brewfile (mac-personal) — apply with `brew bundle --global`
 # Languages (node, python, terraform, opentofu) are managed by mise.
+#
+# A machine with the docker-engine role is a LAB NODE: an engine other machines
+# build on, reached over ssh, with nobody sitting at it. It gets the same
+# command-line experience as the desktops — prompt, completions, kubernetes
+# tools, the lot — by DENY-LIST rather than allow-list, so anything added here
+# later reaches it automatically. Three groups are withheld, for reasons that are
+# properties of the machine rather than opinions about the tools:
+#   * media and graphics (ffmpeg, imagemagick, ghostscript, librsvg) — nothing
+#     renders on a headless box, and on Intel these are the expensive source
+#     builds, 10 to 15 dependencies each.
+#   * cloud CLIs (aws, azure, aliyun, oci) — a lab node is deliberately given no
+#     credentials, so they would have nothing to authenticate with.
+#   * every GUI cask except the engine itself.
+# The Go-based tools still build from source on Intel, but at one dependency
+# each that is minutes, not hours, and only once.
 
 # --- Taps ---
 tap "docker/tap"     # Docker Sandboxes (sbx)
@@ -15,10 +31,10 @@ brew "zsh-history-substring-search"
 brew "zsh-syntax-highlighting"
 
 # --- Formulae: cloud CLIs (not via mise) ---
-brew "aliyun-cli"
-brew "awscli"
-brew "azure-cli"
-brew "oci-cli"
+{{ if not $lab }}brew "aliyun-cli"{{ end }}
+{{ if not $lab }}brew "awscli"{{ end }}
+{{ if not $lab }}brew "azure-cli"{{ end }}
+{{ if not $lab }}brew "oci-cli"{{ end }}
 brew "vercel-cli"
 
 # --- Formulae: kubernetes / cloud-native ---
@@ -78,18 +94,24 @@ brew "zoxide"
 # --- Formulae: system / misc ---
 brew "agg"
 brew "autoconf"
-brew "ffmpeg"
-brew "ghostscript"
+{{ if not $lab }}brew "ffmpeg"{{ end }}
+{{ if not $lab }}brew "ghostscript"{{ end }}
 brew "gifsicle"
 brew "htop"
-brew "imagemagick"
-brew "librsvg"
+{{ if not $lab }}brew "imagemagick"{{ end }}
+{{ if not $lab }}brew "librsvg"{{ end }}
 brew "mise"
 brew "pipx"
 brew "timewarrior"
 brew "tmux"
 brew "uv"
 
+{{ if $lab -}}
+# --- Casks: lab node ---
+# Nobody sits at this machine, so it gets the engine and no GUI at all. When
+# that changes (something to fill the screen, a ticker), add it here.
+cask "docker-desktop"
+{{- else }}
 # --- Casks: terminal + editors ---
 cask "cursor"
 cask "ghostty"
@@ -183,4 +205,5 @@ cask "lm-studio"
 
 # --- Casks: fonts ---
 cask "font-meslo-lg-nerd-font"
+{{- end }}
 {{- end }}
