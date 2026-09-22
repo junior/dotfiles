@@ -352,7 +352,10 @@ up() {
     local _bundle=$(mktemp)
     if brew update && brew bundle install --global >"$_bundle" 2>&1; then
       grep -vE '^Using ' "$_bundle" || true
-      brew upgrade && brew upgrade --cask && brew cleanup
+      # One pass: a bare `brew upgrade` covers formulae AND casks. A second
+      # `brew upgrade --cask` found nothing new and only repeated brew's notice
+      # about the pinned casks it skips.
+      brew upgrade && brew cleanup
     else
       cat "$_bundle"
     fi
@@ -371,7 +374,7 @@ up() {
   mise install && mise upgrade "${_mise_skip[@]}" && mise prune
   tools
   # A Mac that hosts Claude Code Remote Control from a launchd job runs the `claude`
-  # binary as a long-lived process. `brew upgrade --cask` above swaps
+  # binary as a long-lived process. `brew upgrade` above swaps
   # that binary underneath it: the server keeps the old code in memory while every
   # session it spawns from then on runs the new one. Restart the job, but only when
   # the cask really changed and only if the job is loaded on this machine. Last step
