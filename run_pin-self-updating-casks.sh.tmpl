@@ -22,7 +22,11 @@
 # QUIET BY DESIGN: it prints only when it actually pins something.
 set -eu
 
-PINNED=(1password claude forklift google-chrome google-chrome@canary obsidian wireshark-app)
+# docker-desktop joined on 2026-09-21: it updates itself (auto_updates), and
+# brew's upgrade of it removes root-owned privileged helpers, so it needs sudo.
+# That makes `up` unable to finish over ssh on the lab node, which is exactly how
+# that machine is driven. Its own updater keeps it current.
+PINNED=(1password claude docker-desktop forklift google-chrome google-chrome@canary obsidian wireshark-app)
 
 command -v brew >/dev/null 2>&1 || exit 0
 

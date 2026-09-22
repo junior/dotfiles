@@ -3,7 +3,17 @@
        re-running `chezmoi init` (e.g. after this template changes) never loses local settings.
        Optional values may be left blank — the templates that consume them then emit nothing. */ -}}
 {{- $machine := promptChoiceOnce . "machine" "Which machine is this" (list "mac-personal" "wsl-work" "linux-minimal") -}}
-{{- $signingkey := promptStringOnce . "signingkey" "OpenPGP signing key fingerprint, blank for none" "" -}}
+{{- $signingkey := promptStringOnce . "signingkey" "OpenPGP signing key fingerprint (40 hex characters, or a 16-character long key id), blank for none" "" -}}
+{{- /* A wrong answer here is silent and costly: any non-blank value turns on
+       commit and tag signing in ~/.gitconfig, so every commit then fails to
+       sign. On 2026-09-21 the machine name landed in this prompt on the iMac.
+       A fingerprint is hex, so anything else is a slip, not a key. */ -}}
+{{- if $signingkey -}}
+{{-   $k := replace " " "" $signingkey -}}
+{{-   if not (regexMatch "^[0-9A-Fa-f]{16}$|^[0-9A-Fa-f]{40}$" $k) -}}
+{{-     fail (printf "signingkey %q is not an OpenPGP key: expected 40 hex characters (a fingerprint) or 16 (a long key id), or blank for a machine that does not sign. Fix the signingkey line in ~/.config/chezmoi/chezmoi.toml, or re-run 'chezmoi init' and answer again." $signingkey) -}}
+{{-   end -}}
+{{- end -}}
 {{- $corpCaURL := promptStringOnce . "corp_ca_url" "Extra CA bundle URL for TLS-inspecting networks, blank for none" "" -}}
 {{- /* Roles say what this machine DOES, as opposed to `machine`, which says what kind of
        setup it has. Four Macs can share the mac-personal profile and still differ on whether

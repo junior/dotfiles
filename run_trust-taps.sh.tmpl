@@ -1,0 +1,41 @@
+{{ if eq .machine "mac-personal" -}}
+{{- $lab := false -}}{{- if hasKey . "roles" }}{{ $lab = has "docker-engine" .roles }}{{ end -}}
+#!/usr/bin/env bash
+# tools-category: Tool manager
+# Trust the non-official taps this machine installs from.
+#
+# Homebrew 7 refuses to load formulae, casks and commands from third-party taps
+# until they are trusted, and the trust store (~/.homebrew/trust.json) is
+# per-machine state no Brewfile can carry. A fresh Mac therefore gets neither
+# skilla nor sbx, and says so only in a warning in the middle of `brew bundle`:
+# that is how the iMac ended up without skilla on 2026-09-21, and the Studio
+# would do the same. HOMEBREW_NO_REQUIRE_TAP_TRUST would switch the requirement
+# off, but brew deprecates it and says it will be removed, so trust the exact
+# entries instead.
+#
+# A plain run_ script, NOT run_onchange_, for the same reason as the cask pins:
+# `up` applies chezmoi BEFORE `brew bundle` taps anything, so on a new machine
+# the tap does not exist yet on the first run and the next apply must retry.
+# QUIET BY DESIGN: it prints only when it actually trusts something.
+set -eu
+
+command -v brew >/dev/null 2>&1 || exit 0
+
+# "<entry>:<kind>" pairs, matching what the Brewfile declares for THIS machine.
+ENTRIES=("junior/tap/skilla:formula"{{ if and (eq .chezmoi.arch "arm64") (not $lab) }} "docker/tap/sbx:cask"{{ end }})
+
+# `brew trust --json v1` prints the store; grepping the JSON keeps this to one
+# brew call and no parser. Trusting an already-trusted entry is harmless, but
+# staying silent when there is nothing to do is the point.
+trusted="$(brew trust --json v1 2>/dev/null || true)"
+
+for entry in "${ENTRIES[@]}"; do
+  name=${entry%:*}
+  kind=${entry#*:}
+  case "$trusted" in
+    *"\"$name\""*) continue ;;
+  esac
+  echo ">>> trusting $kind $name (Homebrew will not load it otherwise)"
+  brew trust --"$kind" "$name" >/dev/null 2>&1 || echo ">>> WARN: could not trust $name"
+done
+{{ end -}}
