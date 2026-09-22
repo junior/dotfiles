@@ -109,6 +109,16 @@ opentofu = "latest"
 
 # Java/JDK lives here when needed (uncomment + adjust version):
 # java = "temurin-21"
+{{- if eq .chezmoi.arch "amd64" }}
+
+# --- Dev utilities ---
+# INTEL ONLY. Homebrew stopped building Intel bottles in September 2026
+# (decision 0006 in the vault) and uv needs the Rust toolchain, so LLVM first.
+# Upstream ships an Intel Mac binary, which is what mise fetches here. mise
+# itself arrives the same way, from run_install-mise-intel-mac.sh. On Apple
+# silicon uv stays in the Brewfile and this does not render.
+uv        = "latest"
+{{- end }}
 {{- end }}
 
 {{ if eq .machine "linux-minimal" -}}

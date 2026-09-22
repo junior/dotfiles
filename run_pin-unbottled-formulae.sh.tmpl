@@ -1,0 +1,34 @@
+{{ if and (eq .machine "mac-personal") (eq .chezmoi.arch "amd64") -}}
+#!/usr/bin/env bash
+# Freeze the formulae an Intel Mac can no longer pour.
+#
+# Homebrew stopped building Intel bottles in September 2026. These three are
+# installed from bottles built before that and they work fine; what hurts is
+# their next version bump, when `up` would build them from source, and each one
+# needs the Rust toolchain, so LLVM before that: hours, unattended, usually over
+# ssh. Pinning makes brew skip them and keeps the working copies.
+#
+# They stay declared in the Brewfile on purpose, so a machine that CAN pour them
+# still gets them, and so a future Intel bottle would only need `brew unpin`.
+# A lab node with a year of life left does not need a newer `ls`.
+#
+# Same shape as run_pin-self-updating-casks.sh: a plain run_, because the
+# formula may not be installed yet when this first runs, and quiet by design.
+set -eu
+
+command -v brew >/dev/null 2>&1 || exit 0
+
+# Rust tools with no Intel bottle and no Intel binary published upstream.
+PINNED=(eza git-delta trivy)
+
+already="$(brew list --pinned 2>/dev/null || true)"
+
+for f in "${PINNED[@]}"; do
+  brew list --formula "$f" >/dev/null 2>&1 || continue     # not installed yet
+  if printf '%s\n' "$already" | grep -qx "$f"; then
+    continue                                               # already pinned
+  fi
+  echo ">>> pinning $f: no Intel bottle, and rebuilding it pulls in the Rust toolchain"
+  brew pin "$f" >/dev/null 2>&1 || echo ">>> WARN: could not pin $f"
+done
+{{ end -}}

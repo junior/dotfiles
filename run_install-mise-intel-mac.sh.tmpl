@@ -1,0 +1,54 @@
+{{ if and (eq .machine "mac-personal") (eq .chezmoi.arch "amd64") -}}
+#!/usr/bin/env bash
+# tools-category: Tool manager
+# tools-installs: mise
+# mise for an Intel Mac, from its own release binary.
+#
+# Homebrew stopped building Intel bottles in September 2026, and its mise
+# formula now compiles Rust and two LLVM versions to get here: hours, and again
+# on every Rust release. mise publishes a macOS x64 binary itself, so take that
+# instead (decision 0006 in the vault). Checksum-verified, no root, nothing
+# piped into a shell. On Apple silicon mise still comes from the Brewfile and
+# this script renders empty, so it does not run there at all.
+#
+# A plain run_, like the other installers: it must retry on a machine where the
+# download failed once. Quiet when the pinned version is already in place.
+#
+# KEEP THE PIN IN STEP with run_after_install-mise.sh.tmpl, which does the same
+# job on linux-minimal. Two files, one version.
+# mise version: {{ $miseVersion := "v2026.9.9" }}{{ $miseVersion }}
+set -eu
+
+PINNED={{ $miseVersion | quote }}
+BIN="$HOME/.local/bin/mise"
+mkdir -p "$HOME/.local/bin"
+
+have=""
+[ -x "$BIN" ] && have="v$("$BIN" --version 2>/dev/null | awk '{print $1}')"
+[ "$have" = "$PINNED" ] && exit 0
+
+echo ">>> mise: ${have:-none} -> $PINNED (Intel Mac: from mise's own release, not Homebrew)"
+ASSET="mise-$PINNED-macos-x64.tar.gz"
+BASE="https://github.com/jdx/mise/releases/download/$PINNED"
+tmp=$(mktemp -d) || exit 0
+trap 'rm -rf "$tmp"' EXIT INT TERM
+
+if ! curl -fsSL --connect-timeout 10 --max-time 300 -o "$tmp/$ASSET" "$BASE/$ASSET" \
+   || ! curl -fsSL --connect-timeout 10 --max-time 60 -o "$tmp/SUMS" "$BASE/SHASUMS256.txt"; then
+  echo ">>> WARN: mise download failed, keeping ${have:-none}"; exit 0
+fi
+
+want=$(tr -d '\r' < "$tmp/SUMS" | while read -r h f _r; do
+  [ "${f##*/}" = "$ASSET" ] && { printf '%s' "$h"; break; }
+done)
+got=$(shasum -a 256 "$tmp/$ASSET" | cut -d' ' -f1)
+if [ -z "$want" ] || [ "$want" != "$got" ]; then
+  echo ">>> WARN: mise checksum mismatch or missing, refusing to install"; exit 0
+fi
+
+tar xzf "$tmp/$ASSET" -C "$tmp"
+[ -f "$tmp/mise/bin/mise" ] || { echo ">>> WARN: unexpected mise archive layout"; exit 0; }
+cp "$tmp/mise/bin/mise" "$BIN.new" && chmod 755 "$BIN.new" && mv -f "$BIN.new" "$BIN"
+"$BIN" --version >/dev/null 2>&1 || { echo ">>> WARN: mise installed but will not run"; exit 0; }
+echo ">>> mise $PINNED installed in ~/.local/bin"
+{{ end -}}

@@ -1,5 +1,11 @@
 {{- if eq .machine "mac-personal" -}}
 {{- $lab := false -}}{{- if hasKey . "roles" }}{{ $lab = has "docker-engine" .roles }}{{ end -}}
+{{- /* An INTEL Mac. Homebrew stopped building Intel bottles in September 2026, so a
+       formula with no bottle is compiled here, and a few of them drag in Rust and
+       LLVM first: hours, repeated on every toolchain release. Those come from their
+       own prebuilt binaries through mise instead; see decision 0006 in the vault.
+       Keyed on the architecture, never on a machine name, like the casks below. */ -}}
+{{- $intel := eq .chezmoi.arch "amd64" -}}
 # Brewfile (mac-personal) — apply with `brew bundle --global`
 # Languages (node, python, terraform, opentofu) are managed by mise.
 #
@@ -80,18 +86,18 @@ brew "git"
 # runs when stdout is a terminal, and most git here runs from tools and GUIs.
 brew "git-delta"
 brew "git-filter-repo"
-brew "git-lfs"
+{{ if not $intel }}brew "git-lfs"{{ end }}   # not on Intel: its man pages need asciidoctor, so Ruby, so Rust
 brew "httpie"
 brew "jq"
-brew "lnav"
+{{ if not $intel }}brew "lnav"{{ end }}   # not on Intel: needs Rust to build and ships no Intel binary
 brew "mkcert"
 brew "pinentry-mac"   # GUI passphrase prompt for gpg-agent (see ~/.gnupg/gpg-agent.conf)
 brew "ripgrep"
 brew "junior/tap/skilla"
 brew "terraform-docs"
 brew "tfsec"
-brew "vhs"
-brew "vsce"
+{{ if not $intel }}brew "vhs"{{ end }}   # not on Intel: pulls the whole ffmpeg stack in from source
+{{ if not $intel }}brew "vsce"{{ end }}   # not on Intel: would rebuild node
 brew "yh"
 brew "yq"
 brew "zoxide"
@@ -105,11 +111,11 @@ brew "gifsicle"
 brew "htop"
 {{ if not $lab }}brew "imagemagick"{{ end }}
 {{ if not $lab }}brew "librsvg"{{ end }}
-brew "mise"
+{{ if not $intel }}brew "mise"{{ end }}   # from its own release binary on Intel: run_install-mise-intel-mac.sh
 brew "pipx"
 brew "timewarrior"
 brew "tmux"
-brew "uv"
+{{ if not $intel }}brew "uv"{{ end }}   # from mise on Intel (Rust, and no Intel bottle)
 
 {{ if $lab -}}
 # --- Casks: lab node ---
