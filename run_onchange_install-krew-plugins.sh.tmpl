@@ -63,10 +63,12 @@ fi
 
 # `krew list` prints bare names when piped, but be column-tolerant anyway.
 installed="$("$KREW_BIN" list 2>/dev/null | awk '{print $1}')"
+# Speak only when a plugin actually gets installed. chezmoi re-runs this script
+# whenever the file changes (the trigger line above included), and a line per
+# plugin that was already there turned every such run into a wall of noise in
+# `up`, which is meant to report changes only.
 for p in "${PLUGINS[@]}"; do
-  if printf '%s\n' "$installed" | grep -qx "$p"; then
-    echo "krew-plugins: $p already installed"
-  else
+  if ! printf '%s\n' "$installed" | grep -qx "$p"; then
     echo "krew-plugins: installing $p"
     "$KREW_BIN" install "$p"
   fi
