@@ -41,7 +41,7 @@ brew "zsh-syntax-highlighting"
 {{ if not $lab }}brew "awscli"{{ end }}
 {{ if not $lab }}brew "azure-cli"{{ end }}
 {{ if not $lab }}brew "oci-cli"{{ end }}
-brew "vercel-cli"
+{{ if not $intel }}brew "vercel-cli"{{ end }}   # not on Intel: it needs node, and node is a long build here
 
 # --- Formulae: kubernetes / cloud-native ---
 brew "calicoctl"

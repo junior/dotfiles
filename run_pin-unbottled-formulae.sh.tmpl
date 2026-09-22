@@ -18,8 +18,14 @@ set -eu
 
 command -v brew >/dev/null 2>&1 || exit 0
 
-# Rust tools with no Intel bottle and no Intel binary published upstream.
-PINNED=(eza git-delta trivy)
+# Two groups, both installed and working, neither worth rebuilding here:
+#   eza, git-delta, trivy         Rust, and no Intel binary published upstream.
+#   node, merve, simdutf, vercel  A long build. The only thing that wanted node
+#                                 here was vercel, which an Intel machine no
+#                                 longer declares; both stay until a cleanup.
+# `brew upgrade` walks every INSTALLED formula, not just the declared ones, which
+# is why a leftover that nothing declares still has to be pinned.
+PINNED=(eza git-delta trivy node merve simdutf vercel)
 
 already="$(brew list --pinned 2>/dev/null || true)"
 
