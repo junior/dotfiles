@@ -108,6 +108,7 @@ so it cannot list something that is not actually installed.
 | `dot_config/kind/*.yaml.tmpl` | kind configs | Cluster presets: default, no-CNI, Calico (iptables/eBPF) |
 | `dot_default-python-packages` | mise | Default pip packages for every Python (on linux-minimal only with the `python` extra) |
 | `dot_local/bin/executable_tx` | `~/.local/bin/tx` | curl-only S3 file-transfer client (pairs with [s3tx](https://github.com/junior/s3tx)) |
+| `dot_local/bin/executable_vaults` | `~/.local/bin/vaults` | one status line per Obsidian vault (changes, commits to push or pull, last commit) and `vaults pull` for all of them; POSIX sh, not on linux-minimal |
 | `private_dot_ssh/private_config` | `~/.ssh/config` | WSL-only: overlay include + keepalives for stateful-firewall networks |
 | `run_onchange_install-apt-packages.sh.tmpl` | — | Declarative apt list (WSL) |
 | `run_onchange_install-krew-plugins.sh.tmpl` | — | Declarative kubectl/krew plugin list (mac and WSL; on linux-minimal only when asked for via `extras`; bootstraps krew on Linux, skips without git) |

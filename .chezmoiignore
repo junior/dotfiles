@@ -34,6 +34,8 @@ bootstrap.sh
 .default-npm-packages
 .gnupg
 .config/kind
+# No Obsidian vaults are kept on these hosts, so nothing for `vaults` to show.
+.local/bin/vaults
 {{ $extras := list }}{{ if hasKey . "extras" }}{{ $extras = regexSplit "\\s*,\\s*" (trim .extras) -1 }}{{ end -}}
 {{ if not (has "python" $extras) -}}
 # mise reads this when it installs a Python, which happens only with that extra.

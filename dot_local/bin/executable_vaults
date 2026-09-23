@@ -1,0 +1,176 @@
+#!/usr/bin/env sh
+# vaults - one look at every Obsidian vault on this machine, and one pull for all.
+#
+# A vault is a git repository directly inside the vaults folder, which is
+#   $VAULTS_DIR if set, else ~/vaults if it exists, else (in WSL) the first
+#   /mnt/c/Users/*/vaults, where the vaults sit so Windows apps can reach them.
+# $VAULTS_EXTRA adds vaults kept elsewhere, colon-separated.
+#
+# Nothing here commits or pushes: that stays a deliberate act in each vault.
+# Portable to any POSIX shell with git: macOS, Linux, WSL, Git Bash.
+#
+# Usage:
+#   vaults [status] [-f]   state of every vault; -f fetches first, so "to pull" is current
+#   vaults pull            fast-forward every vault that has a remote and no local changes
+#   vaults ls              the vault paths, one per line
+#   vaults help
+
+set -eu
+# run as `zsh vaults`, zsh would neither split words nor tolerate an empty glob
+if [ -n "${ZSH_VERSION:-}" ]; then emulate sh; fi
+
+prog=vaults
+
+die() { printf '%s: %s\n' "$prog" "$*" >&2; exit 1; }
+
+usage() {
+  cat <<EOF
+Usage:
+  $prog [status] [-f]   state of every vault; -f fetches first, so "to pull" is current
+  $prog pull            fast-forward every vault that has a remote and no local changes
+  $prog ls              the vault paths, one per line
+  $prog help
+
+Vaults are the git repositories inside \$VAULTS_DIR, else ~/vaults, else (in WSL)
+the first /mnt/c/Users/*/vaults. \$VAULTS_EXTRA adds more, colon-separated.
+EOF
+}
+
+command -v git >/dev/null 2>&1 || die "git is required but was not found"
+
+# The folder holding the vaults. VAULTS_WINDOWS_USERS exists so tests can stand in
+# for /mnt/c/Users.
+vaults_root() {
+  if [ -n "${VAULTS_DIR:-}" ]; then printf '%s\n' "$VAULTS_DIR"; return; fi
+  if [ -d "$HOME/vaults" ]; then printf '%s\n' "$HOME/vaults"; return; fi
+  for candidate in "${VAULTS_WINDOWS_USERS:-/mnt/c/Users}"/*/vaults; do
+    if [ -d "$candidate" ]; then printf '%s\n' "$candidate"; return; fi
+  done
+  printf '%s\n' "$HOME/vaults"
+}
+
+is_repo() { [ -e "$1/.git" ]; }
+
+# Every vault path, once each, in a stable order: the folder first, then extras.
+list_vaults() {
+  root=$(vaults_root)
+  seen='
+'
+  for dir in "$root"/*/; do
+    dir=${dir%/}
+    is_repo "$dir" || continue
+    case "$seen" in *"
+$dir
+"*) continue ;; esac
+    seen="$seen$dir
+"
+    printf '%s\n' "$dir"
+  done
+  if [ -n "${VAULTS_EXTRA:-}" ]; then
+    set -f
+    saved_ifs=$IFS
+    IFS=:
+    # shellcheck disable=SC2086  # splitting on ':' is the point
+    set -- $VAULTS_EXTRA
+    IFS=$saved_ifs
+    set +f
+    for dir in "$@"; do
+      dir=${dir%/}
+      if [ -z "$dir" ] || ! is_repo "$dir"; then continue; fi
+      case "$seen" in *"
+$dir
+"*) continue ;; esac
+      seen="$seen$dir
+"
+      printf '%s\n' "$dir"
+    done
+  fi
+}
+
+has_upstream() { git -C "$1" rev-parse --abbrev-ref '@{upstream}' >/dev/null 2>&1; }
+
+status_one() {
+  dir=$1
+  name=$(basename "$dir")
+  branch=$(git -C "$dir" symbolic-ref --quiet --short HEAD 2>/dev/null) || branch='(detached)'
+  count=$(git -C "$dir" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$count" -eq 0 ]; then changes=clean; else changes="$count changed"; fi
+  if has_upstream "$dir"; then
+    counts=$(git -C "$dir" rev-list --left-right --count '@{upstream}...HEAD' 2>/dev/null) || counts='? ?'
+    # shellcheck disable=SC2086  # two numbers: behind, ahead
+    set -- $counts
+    behind=$1 ahead=$2
+    if [ "$ahead" = 0 ] && [ "$behind" = 0 ]; then remote='in sync'
+    elif [ "$behind" = 0 ]; then remote="$ahead to push"
+    elif [ "$ahead" = 0 ]; then remote="$behind to pull"
+    else remote="$ahead to push, $behind to pull"
+    fi
+  else
+    remote='no remote'
+  fi
+  last=$(git -C "$dir" log -1 --format=%cr 2>/dev/null) || last='no commits'
+  printf '%-11s %-9s %-11s %-22s %s\n' "$name" "$branch" "$changes" "$remote" "$last"
+}
+
+cmd_status() {
+  fetch=no
+  for arg in "$@"; do
+    case "$arg" in
+      -f|--fetch) fetch=yes ;;
+      *) die "status: unknown option '$arg' (try: $prog help)" ;;
+    esac
+  done
+  paths=$(list_vaults)
+  [ -n "$paths" ] || die "no vaults found in $(vaults_root)"
+  printf '%-11s %-9s %-11s %-22s %s\n' vault branch changes remote 'last commit'
+  printf '%s\n' "$paths" | while IFS= read -r dir; do
+    if [ "$fetch" = yes ] && has_upstream "$dir"; then
+      git -C "$dir" fetch --quiet 2>/dev/null ||
+        printf '%s: %s: fetch failed, remote counts may be stale\n' "$prog" "$(basename "$dir")" >&2
+    fi
+    status_one "$dir"
+  done
+}
+
+cmd_pull() {
+  [ $# -eq 0 ] || die "pull takes no arguments"
+  paths=$(list_vaults)
+  [ -n "$paths" ] || die "no vaults found in $(vaults_root)"
+  failed=0
+  # a here-document keeps the loop in this shell, so $failed survives it
+  while IFS= read -r dir; do
+    name=$(basename "$dir")
+    if ! has_upstream "$dir"; then
+      printf '%-11s skipped: no remote\n' "$name"
+      continue
+    fi
+    if [ -n "$(git -C "$dir" status --porcelain)" ]; then
+      printf '%-11s skipped: uncommitted changes; commit them first\n' "$name"
+      continue
+    fi
+    before=$(git -C "$dir" rev-parse HEAD)
+    if out=$(git -C "$dir" pull --ff-only --quiet 2>&1); then
+      after=$(git -C "$dir" rev-parse HEAD)
+      if [ "$before" = "$after" ]; then
+        printf '%-11s up to date\n' "$name"
+      else
+        printf '%-11s pulled %s commit(s)\n' "$name" "$(git -C "$dir" rev-list --count "$before..$after")"
+      fi
+    else
+      printf '%-11s FAILED: %s\n' "$name" "$(printf '%s\n' "$out" | head -n 1)"
+      failed=1
+    fi
+  done <<EOF
+$paths
+EOF
+  return "$failed"
+}
+
+case "${1:-status}" in
+  status) if [ $# -gt 0 ]; then shift; fi; cmd_status "$@" ;;
+  -f|--fetch) cmd_status "$@" ;;
+  pull) shift; cmd_pull "$@" ;;
+  ls) list_vaults ;;
+  help|-h|--help) usage ;;
+  *) usage >&2; exit 2 ;;
+esac
