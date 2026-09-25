@@ -192,6 +192,11 @@ cask "drawio"
 cask "github"
 cask "gitkraken"
 cask "gpg-suite"
+# Homebrew's own GUI (BrewUI), new with Homebrew 7. It needs macOS 26 or later, which
+# every desktop here runs; the Intel iMac is a lab node and gets no GUI casks. A desktop
+# on an older macOS would need a guard, because `brew bundle` fails on an unmet
+# requirement. Not self-updating, so `up`'s `brew upgrade` moves it.
+cask "homebrew-app"
 cask "httpie-desktop"
 cask "jetbrains-toolbox"
 cask "kaleidoscope"

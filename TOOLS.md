@@ -167,6 +167,7 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | [github](https://desktop.github.com/) | Desktop client for GitHub repositories |
 | [gitkraken](https://www.gitkraken.com/) | Git client focusing on productivity |
 | [gpg-suite](https://gpgtools.org/) | Tools to protect your emails and files |
+| [homebrew-app](https://github.com/Homebrew/BrewUI) | Homebrew's official GUI |
 | [httpie-desktop](https://httpie.io/product) | Testing client for REST, GraphQL, and HTTP APIs |
 | [jetbrains-toolbox](https://www.jetbrains.com/toolbox-app/) | JetBrains tools manager |
 | [kaleidoscope](https://kaleidoscope.app/) | Spot and merge differences in text and image files or folders |
