@@ -180,6 +180,8 @@ OVERRIDES = {
                    "https://www.terraform.io/"),
     "regctl":     ("Registry client for OCI images and artifacts, no daemon needed",
                    "https://github.com/regclient/regclient"),
+    "k10s":       ("Kubernetes TUI you can click: search, logs, exec and port-forward",
+                   "https://github.com/p10node/k10s"),
     "docker-cli": ("The Docker command-line client on its own, without the engine",
                    "https://github.com/docker/cli"),
     "kubens":     ("Switch between Kubernetes namespaces (ships with kubectx)",

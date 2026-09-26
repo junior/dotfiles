@@ -36,6 +36,8 @@ bootstrap.sh
 .config/kind
 # No Obsidian vaults are kept on these hosts, so nothing for `vaults` to show.
 .local/bin/vaults
+# k10s is not installed on these hosts, so its seeded config has nothing to configure.
+.k10s
 {{ $extras := list }}{{ if hasKey . "extras" }}{{ $extras = regexSplit "\\s*,\\s*" (trim .extras) -1 }}{{ end -}}
 {{ if not (has "python" $extras) -}}
 # mise reads this when it installs a Python, which happens only with that extra.

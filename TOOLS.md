@@ -211,6 +211,12 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | --- | --- |
 | [regctl](https://github.com/regclient/regclient) | Registry client for OCI images and artifacts, no daemon needed |
 
+### Kubernetes / cloud-native
+
+| Tool | What it is |
+| --- | --- |
+| [k10s](https://github.com/p10node/k10s) | Kubernetes TUI you can click: search, logs, exec and port-forward |
+
 ### Dev utilities
 
 | Tool | What it is |
@@ -254,6 +260,7 @@ mise from `dot_config/mise/config.toml.tmpl` — no Homebrew on this box — plu
 
 | Tool | What it is |
 | --- | --- |
+| [k10s](https://github.com/p10node/k10s) | Kubernetes TUI you can click: search, logs, exec and port-forward |
 | [cosign](https://github.com/sigstore/cosign) | Container Signing |
 | [helm](https://helm.sh/) | Kubernetes package manager |
 | [istioctl](https://istio.io/) | Istio configuration command-line utility |

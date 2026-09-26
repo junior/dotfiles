@@ -30,6 +30,17 @@ terraform = "latest"
 # release binaries. If a real homebrew-core formula ever appears, move the mac to the Brewfile.
 regctl    = "latest"
 
+# --- Kubernetes / cloud-native ---
+# k10s is SHARED for the same reason as regctl: no homebrew-core formula, no
+# upstream tap and nothing in mise's registry, so the github backend takes the
+# release binary on both machines. PINNED, unlike its neighbours: a young
+# project with one maintainer and unsigned releases, so a new version waits
+# until someone has read it. Its own updater is switched off in
+# ~/.k10s/config.yaml, so mise stays the only thing that replaces the binary.
+# Leave its AI feature unconfigured on work machines: it sends the current
+# context and namespace names to the provider.
+"github:p10node/k10s" = "0.1.6"
+
 {{ end -}}
 
 {{ if eq .machine "wsl-work" -}}

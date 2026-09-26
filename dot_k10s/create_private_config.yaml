@@ -1,0 +1,6 @@
+# k10s configuration. Seeded once by chezmoi (create_, so never overwritten):
+# from then on k10s owns this file and rewrites it from /settings. The one
+# setting that matters here: its self-updater stays off, because mise pins and
+# replaces the binary (see the mise config).
+update:
+  disabled: true
