@@ -169,6 +169,9 @@ fi
 # === Completions for external tools ===
 command -v ngrok &>/dev/null && eval "$(ngrok completion)"
 command -v terraform &>/dev/null && complete -o nospace -C "$(command -v terraform)" terraform
+# vault's Homebrew formula ships a native _vault; mise's install (wsl-work) ships none,
+# so there it completes itself the terraform way.
+command -v vault &>/dev/null && (( ! $+_comps[vault] )) && complete -o nospace -C "$(command -v vault)" vault
 {{- if ne .machine "wsl-work" }}
 command -v aws_completer &>/dev/null && complete -C "$(command -v aws_completer)" aws
 {{- end }}

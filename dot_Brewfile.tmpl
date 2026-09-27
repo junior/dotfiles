@@ -27,6 +27,7 @@
 # --- Taps ---
 tap "docker/tap"     # Docker Sandboxes (sbx)
 tap "junior/tap"
+{{ if not $lab }}tap "hashicorp/tap"{{ end }}   # Vault left homebrew-core with its licence change; HashiCorp keeps this tap
 
 # --- Formulae: shell + completions ---
 brew "powerlevel10k"
@@ -41,6 +42,7 @@ brew "zsh-syntax-highlighting"
 {{ if not $lab }}brew "awscli"{{ end }}
 {{ if not $lab }}brew "azure-cli"{{ end }}
 {{ if not $lab }}brew "oci-cli"{{ end }}
+{{ if not $lab }}brew "hashicorp/tap/vault"{{ end }}   # the Vault CLI; its tap is trusted in run_trust-taps.sh
 {{ if not $intel }}brew "vercel-cli"{{ end }}   # not on Intel: it needs node, and node is a long build here
 
 # --- Formulae: kubernetes / cloud-native ---

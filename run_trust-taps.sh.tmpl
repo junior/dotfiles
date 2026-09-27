@@ -6,8 +6,8 @@
 #
 # Homebrew 7 refuses to load formulae, casks and commands from third-party taps
 # until they are trusted, and the trust store (~/.homebrew/trust.json) is
-# per-machine state no Brewfile can carry. A fresh Mac therefore gets neither
-# skilla nor sbx, and says so only in a warning in the middle of `brew bundle`:
+# per-machine state no Brewfile can carry. A fresh Mac therefore gets none of
+# skilla, sbx or vault, and says so only in a warning in the middle of `brew bundle`:
 # that is how the iMac ended up without skilla on 2026-09-21, and the Studio
 # would do the same. HOMEBREW_NO_REQUIRE_TAP_TRUST would switch the requirement
 # off, but brew deprecates it and says it will be removed, so trust the exact
@@ -22,7 +22,7 @@ set -eu
 command -v brew >/dev/null 2>&1 || exit 0
 
 # "<entry>:<kind>" pairs, matching what the Brewfile declares for THIS machine.
-ENTRIES=("junior/tap/skilla:formula"{{ if and (eq .chezmoi.arch "arm64") (not $lab) }} "docker/tap/sbx:cask"{{ end }})
+ENTRIES=("junior/tap/skilla:formula"{{ if not $lab }} "hashicorp/tap/vault:formula"{{ end }}{{ if and (eq .chezmoi.arch "arm64") (not $lab) }} "docker/tap/sbx:cask"{{ end }})
 
 # `brew trust --json v1` prints the store; grepping the JSON keeps this to one
 # brew call and no parser. Trusting an already-trusted entry is harmless, but

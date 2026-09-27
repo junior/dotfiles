@@ -28,6 +28,7 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | [awscli](https://aws.amazon.com/cli/) | Official Amazon AWS command-line interface |
 | [azure-cli](https://docs.microsoft.com/cli/azure/overview) | Microsoft Azure CLI 2.0 |
 | [oci-cli](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/cliconcepts.htm) | Oracle Cloud Infrastructure CLI |
+| [vault](https://developer.hashicorp.com/vault) | HashiCorp Vault CLI: read and write secrets, log in, manage leases |
 | [vercel-cli](https://vercel.com/home) | Command-line interface for Vercel |
 
 ### Formulae: kubernetes / cloud-native
@@ -278,6 +279,12 @@ mise from `dot_config/mise/config.toml.tmpl` — no Homebrew on this box — plu
 | [kubeshark](https://kubeshark.com) | API Traffic Analyzer providing real-time visibility into Kubernetes network |
 | [operator-sdk](https://sdk.operatorframework.io/) | SDK for building Kubernetes applications |
 | [calico](https://github.com/projectcalico/calico) | Kubernetes networking and network policy (CNI) |
+
+### Cloud CLIs
+
+| Tool | What it is |
+| --- | --- |
+| [vault](https://developer.hashicorp.com/vault) | HashiCorp Vault CLI: read and write secrets, log in, manage leases |
 
 ### Dev utilities
 
