@@ -285,6 +285,7 @@ mise from `dot_config/mise/config.toml.tmpl` — no Homebrew on this box — plu
 | Tool | What it is |
 | --- | --- |
 | [vault](https://developer.hashicorp.com/vault) | HashiCorp Vault CLI: read and write secrets, log in, manage leases |
+| [1password-cli](https://developer.1password.com/docs/cli) | Command-line interface for 1Password |
 
 ### Dev utilities
 

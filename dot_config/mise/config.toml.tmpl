@@ -78,6 +78,10 @@ stern     = "latest"
 # The HashiCorp Vault CLI. Homebrew-core dropped it with its licence change, so the
 # Mac takes it from HashiCorp's own tap; mise installs the same official release.
 vault     = "latest"
+# The 1Password CLI (`op`); the Mac has it as the 1password-cli cask. This name takes
+# the registry's plugin, which lists 1Password's own releases and downloads them from
+# its CDN; aqua's package installs too, but warns on every run and lists no versions.
+1password-cli = "latest"
 
 # --- Dev utilities ---
 ansible   = "latest"
