@@ -59,6 +59,12 @@
 # OpenPGP (not the newer SSH signing format) — matches the signingkey above.
 [gpg]
 	format = openpgp
+{{- with lookPath "gpg" }}
+	# An absolute path, so signing also works where PATH is the bare system one:
+	# apps started from the Dock or Finder (Obsidian's Git plugin) and launchd
+	# jobs. lookPath resolves it on the machine running chezmoi.
+	program = {{ . }}
+{{- end }}
 
 # Sign every commit and annotated tag. Inside the same `signingkey` guard on
 # purpose: a fork or a machine without the key must never get gpgsign=true, or
