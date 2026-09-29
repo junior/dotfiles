@@ -1,0 +1,27 @@
+{{- $lab := false -}}{{- if hasKey . "roles" }}{{ $lab = has "docker-engine" .roles }}{{ end -}}
+{{ if and (eq .machine "mac-personal") (not $lab) -}}
+#!/usr/bin/env bash
+# Keep the Claude desktop app from updating itself.
+#
+# Its updater installs a staged update by relaunching the app once the Mac has sat
+# idle for a while, and the relaunch drops every Remote Control connection to the
+# Code sessions the app hosts; they come back only when someone is at the Mac again.
+# A Mac that hosts sessions is idle precisely when its user is away, which is when
+# those connections matter (seen 2026-09-17 and 2026-09-28, reported in
+# https://github.com/anthropics/claude-code/issues/95276).
+#
+# The only switch is the app's policy key, documented for managed deployments. This
+# sets it per user; whether the app honors a per-user value is still being checked
+# against its next update cycle in ~/Library/Logs/Claude/main.log. With it on, the
+# app updates only through Claude > Check for Updates, and brew leaves it alone too:
+# the `claude` cask is pinned in run_pin-self-updating-casks.sh.
+#
+# A plain run_ script, so it puts the value back if anything resets it. The lab node
+# has no desktop app and is skipped. QUIET BY DESIGN: it prints only when it writes.
+set -eu
+
+domain=com.anthropic.claudefordesktop
+[ "$(defaults read "$domain" disableAutoUpdates 2>/dev/null || true)" = 1 ] && exit 0
+defaults write "$domain" disableAutoUpdates -bool true
+echo ">>> Claude desktop: automatic updates off (update through Claude > Check for Updates)"
+{{ end -}}
