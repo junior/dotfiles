@@ -39,7 +39,9 @@ HISTSIZE=100000
 HISTFILESIZE=200000
 HISTCONTROL=ignoreboth:erasedups
 HISTTIMEFORMAT='%F %T  '
-HISTIGNORE='ls:ll:la:bg:fg:history:clear:exit:tx *:* | tx *'
+# tx codes are single-use: drop tx alone, piped into, after && or ;, or with a
+# variable in front. In HISTIGNORE a bare & means the previous line, hence \&.
+HISTIGNORE='ls:ll:la:bg:fg:history:clear:exit:tx *:* tx *:*[;\&|]tx *'
 shopt -s histappend cmdhist 2>/dev/null
 _hist_sync() { history -a; history -n; }
 case "${PROMPT_COMMAND:-}" in
