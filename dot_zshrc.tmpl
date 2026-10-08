@@ -160,7 +160,25 @@ if command -v fzf &>/dev/null; then
 fi
 
 command -v zoxide &>/dev/null && eval "$(zoxide init zsh --cmd cd)"
-command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
+# direnv writes the absolute path of the binary that made the hook into the hook.
+# Where mise installs direnv (wsl-work) that path names the version, and `up`
+# upgrades and then prunes it, so every shell opened before an upgrade called a
+# deleted file at each prompt ("no such file or directory: .../direnv/2.37.1/direnv",
+# 2026-10-07). The hook calls it by name instead, through PATH, which mise's own
+# prompt hook keeps on the current version; until that hook has run once in an old
+# shell, the stale entry is skipped quietly. Both hook formats are covered:
+# $'/path/direnv' (2.38) and "/path/direnv" (earlier).
+if command -v direnv &>/dev/null; then
+  _direnv_run() {
+    [[ -x ${commands[direnv]-} ]] || rehash
+    [[ -x ${commands[direnv]-} ]] && command direnv "$@"
+  }
+  () {
+    setopt localoptions extendedglob
+    local hook; hook=$(direnv hook zsh)
+    eval "${hook//(\$\'|\")\/[^\'\"]##\/direnv(\'|\") export/_direnv_run export}"
+  }
+fi
 
 if command -v kubecolor &>/dev/null; then
   export KUBECOLOR_OBJ_FRESH="1h"
