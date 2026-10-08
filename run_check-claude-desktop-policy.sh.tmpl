@@ -1,0 +1,45 @@
+{{- $lab := false -}}{{- if hasKey . "roles" }}{{ $lab = has "docker-engine" .roles }}{{ end -}}
+{{ if and (eq .machine "mac-personal") (not $lab) -}}
+#!/usr/bin/env bash
+# Check that the Claude desktop app's own updater is blocked.
+#
+# Left on, the updater downloads an update and relaunches the app once the Mac
+# has been idle for ten minutes. The relaunch stops every Code session, and Remote
+# Control comes back for a session only when a message is sent to it, so a Mac
+# reached from the phone goes dark exactly while its user is away (three times on
+# 2026-10-05..07; https://github.com/anthropics/claude-code/issues/95276).
+#
+# The switch is the app's policy key `disableAutoUpdates`, and the app reads its
+# policy keys only from managed preferences, the files a configuration profile
+# writes under /Library/Managed Preferences. A value in the user's own preferences
+# (`defaults write`) is ignored; the script this one replaced wrote exactly that,
+# so that leftover is removed here. Installing a profile takes the user's approval
+# in System Settings, so this only checks, and says how when it is missing:
+# the profile is ~/.config/claude-desktop/block-auto-updates.mobileconfig.
+# Updates then happen by hand: `up` says when one is out, claude-desktop-update
+# installs it.
+#
+# A plain run_ script, so the check runs on every apply. The lab node has no
+# desktop app and is skipped. QUIET BY DESIGN: it prints only when something is off.
+set -eu
+
+domain=com.anthropic.claudefordesktop
+profile="$HOME/.config/claude-desktop/block-auto-updates.mobileconfig"
+user="$(id -un)"
+
+if defaults read "$domain" disableAutoUpdates >/dev/null 2>&1; then
+  defaults delete "$domain" disableAutoUpdates
+  echo ">>> Claude desktop: removed the per-user disableAutoUpdates, which the app ignores"
+fi
+
+[ -d /Applications/Claude.app ] || exit 0
+
+for f in "/Library/Managed Preferences/$user/$domain.plist" "/Library/Managed Preferences/$domain.plist"; do
+  [ "$(plutil -extract disableAutoUpdates raw -o - "$f" 2>/dev/null || true)" = true ] && exit 0
+done
+
+echo ">>> Claude desktop: its own updater is NOT blocked, so it can relaunch the app and drop"
+echo "    Remote Control while you are away. Install the profile once, then restart Claude:"
+echo "      open \"$profile\""
+echo "    and approve it in System Settings > Privacy & Security > Profiles."
+{{ end -}}

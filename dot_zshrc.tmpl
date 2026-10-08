@@ -367,6 +367,11 @@ up() {
   else
     mise self-update                  # only valid where mise isn't brew-managed
   fi
+  # The Claude desktop app's own updater is blocked (run_check-claude-desktop-policy):
+  # say when a newer version is out, so it is installed by choice, at the Mac.
+  if command -v claude-desktop-update &>/dev/null; then
+    claude-desktop-update --check || true
+  fi
   # `mise upgrade` asks every tool for its latest version, but http:-backend tools
   # pin an exact URL and expose no version feed — they only answer with
   # "Error getting latest version ... no version found". Skip them; they are

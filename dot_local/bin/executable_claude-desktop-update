@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# claude-desktop-update - update the Claude desktop app by hand.
+#
+# The app's own updater is blocked by a configuration profile (see
+# run_check-claude-desktop-policy.sh): left on, it downloads an update and
+# relaunches the app once the Mac has been idle for ten minutes. The relaunch
+# stops every Code session, and Remote Control comes back for a session only
+# when a message is sent to it, so a Mac reached from the phone goes dark
+# exactly while its user is away. Updates now happen when you choose, at the
+# Mac: `up` says when a newer version is out, and this installs it.
+#
+#   claude-desktop-update           show the versions, and update after a yes
+#   claude-desktop-update --check   one line if a newer version is out, else nothing
+#
+# The version on offer is the `claude` cask's, so run `brew update` (or `up`)
+# first. The cask stays pinned for `brew upgrade`; this unpins it for the one
+# upgrade and pins it again whatever happens. macOS may ask once to let the
+# terminal modify apps (System Settings > Privacy & Security > App Management).
+set -eu
+
+app="${CLAUDE_DESKTOP_APP:-/Applications/Claude.app}"
+bin="$app/Contents/MacOS/Claude"
+
+have="$(defaults read "$app/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null || true)"
+[ -n "$have" ] || { echo "claude-desktop-update: no Claude app at $app" >&2; exit 1; }
+want="$(brew info --cask --json=v2 claude 2>/dev/null | jq -r '.casks[0].version // empty' | cut -d, -f1)"
+[ -n "$want" ] || { echo "claude-desktop-update: brew does not know the claude cask's version (run brew update)" >&2; exit 1; }
+
+newer() {  # is $2 a later version than $1? Dotted numbers, up to four parts.
+  [ "$1" != "$2" ] &&
+    [ "$(printf '%s\n%s\n' "$1" "$2" | sort -t. -k1,1n -k2,2n -k3,3n -k4,4n | tail -n 1)" = "$2" ]
+}
+
+if [ "${1:-}" = --check ]; then
+  if newer "$have" "$want"; then
+    echo "Claude desktop $want is out (this Mac has $have): run claude-desktop-update at the Mac; it restarts the app"
+  fi
+  exit 0
+fi
+
+if ! newer "$have" "$want"; then
+  echo "Claude desktop $have is current."
+  exit 0
+fi
+
+echo "Claude desktop $have -> $want."
+echo "Updating quits the app: every Code session stops, and Remote Control comes back for"
+echo "a session when it gets a message."
+printf 'Update now? [y/N] '
+read -r answer
+case "$answer" in y | Y | yes) ;; *) echo "Left at $have."; exit 0 ;; esac
+
+osascript -e 'quit app "Claude"' >/dev/null 2>&1 || true
+i=0
+while pgrep -f "$bin" >/dev/null 2>&1 && [ "$i" -lt 30 ]; do sleep 1; i=$((i + 1)); done
+if pgrep -f "$bin" >/dev/null 2>&1; then
+  echo "claude-desktop-update: Claude did not quit; quit it and run this again." >&2
+  exit 1
+fi
+
+trap 'brew pin --cask claude >/dev/null 2>&1 || true' EXIT
+brew unpin --cask claude >/dev/null 2>&1 || true
+status=0
+brew upgrade --cask --greedy claude || status=$?
+open -a "$app" >/dev/null 2>&1 || true
+if [ "$status" -ne 0 ]; then
+  echo "claude-desktop-update: the upgrade failed (exit $status). If macOS blocked it, allow the" >&2
+  echo "terminal under System Settings > Privacy & Security > App Management and run this again." >&2
+  exit "$status"
+fi
+echo "Claude desktop updated to $(defaults read "$app/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null || echo "?")."

@@ -61,3 +61,10 @@ bootstrap.sh
 .ssh/config.d/lab
 ensure-ssh-include.sh
 {{- end }}
+{{ if or (ne .machine "mac-personal") (has "docker-engine" $roles) -}}
+# The Claude desktop app runs only on the personal Macs that are not lab nodes:
+# its update helper and the profile that blocks its own updater have nothing to
+# do anywhere else.
+.local/bin/claude-desktop-update
+.config/claude-desktop
+{{- end }}

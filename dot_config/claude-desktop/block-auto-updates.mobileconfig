@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>PayloadContent</key>
+	<array>
+		<dict>
+			<key>PayloadType</key>
+			<string>com.apple.ManagedClient.preferences</string>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
+			<key>PayloadIdentifier</key>
+			<string>local.dotfiles.claude-desktop.block-auto-updates.prefs</string>
+			<key>PayloadUUID</key>
+			<string>7871B9EC-4A3F-4D7D-9B9A-246CDE4F97BC</string>
+			<key>PayloadDisplayName</key>
+			<string>Claude desktop: block auto-updates</string>
+			<key>PayloadEnabled</key>
+			<true/>
+			<key>PayloadContent</key>
+			<dict>
+				<key>com.anthropic.claudefordesktop</key>
+				<dict>
+					<key>Forced</key>
+					<array>
+						<dict>
+							<key>mcx_preference_settings</key>
+							<dict>
+								<key>disableAutoUpdates</key>
+								<true/>
+							</dict>
+						</dict>
+					</array>
+				</dict>
+			</dict>
+		</dict>
+	</array>
+	<key>PayloadDisplayName</key>
+	<string>Claude desktop: block auto-updates</string>
+	<key>PayloadDescription</key>
+	<string>Stops the Claude desktop app from downloading updates and relaunching itself when idle, which drops Remote Control. Update the app by hand.</string>
+	<key>PayloadIdentifier</key>
+	<string>local.dotfiles.claude-desktop.block-auto-updates</string>
+	<key>PayloadOrganization</key>
+	<string>dotfiles</string>
+	<key>PayloadScope</key>
+	<string>System</string>
+	<key>PayloadType</key>
+	<string>Configuration</string>
+	<key>PayloadUUID</key>
+	<string>C99352B8-5CA8-4E82-8BCD-CBC73792D811</string>
+	<key>PayloadVersion</key>
+	<integer>1</integer>
+	<key>PayloadRemovalDisallowed</key>
+	<false/>
+</dict>
+</plist>
