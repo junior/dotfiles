@@ -1,0 +1,45 @@
+{{- $lab := false -}}{{- if hasKey . "roles" }}{{ $lab = has "docker-engine" .roles }}{{ end -}}
+{{- $appliance := false -}}{{- if hasKey . "roles" }}{{ $appliance = has "appliance" .roles }}{{ end -}}
+{{ if and (eq .machine "mac-personal") (or $lab $appliance) -}}
+#!/usr/bin/env bash
+# Take peer-watch off a lab node (role docker-engine) or an appliance, where it does
+# not belong: such a Mac is watched by others, and nobody reads its notifications.
+#
+# A Mac applied before it took one of those roles got peer-watch like any other
+# personal Mac. With the role set, chezmoi ignores the script and the plist
+# (.chezmoiignore) and leaves them where they are, and launchd would go on running a
+# job it had loaded. This unloads the job and removes the two files, as
+# run_after_unload-claude-signin.sh does for claude-signin. The list of machines,
+# ~/.config/peer-watch/hosts, is the user's and stays, and so does the record under
+# ~/.local/state/peer-watch.
+#
+# A plain run_after_ script, so it runs at every apply. QUIET BY DESIGN: it prints
+# only when it takes something off, and it never fails the apply.
+set -u
+
+label=local.peer-watch
+target="gui/$(id -u)/$label"
+plist="$HOME/Library/LaunchAgents/$label.plist"
+script="$HOME/.local/bin/peer-watch"
+
+loaded=false
+launchctl print "$target" >/dev/null 2>&1 && loaded=true
+[ "$loaded" = true ] || [ -e "$plist" ] || [ -e "$script" ] || exit 0
+
+did=""
+if [ "$loaded" = true ]; then
+  if launchctl bootout "$target" 2>/dev/null; then
+    did="unloaded its launchd job ($label)"
+  else
+    echo ">>> WARN: could not unload $label; run: launchctl bootout $target"
+  fi
+fi
+for f in "$plist" "$script"; do
+  [ -e "$f" ] || continue
+  rm -f "$f" && did="${did:+$did, }removed ~/${f#"$HOME"/}"
+done
+if [ -n "$did" ]; then
+  echo ">>> peer-watch is off this Mac, a lab node or an appliance: $did"
+fi
+exit 0
+{{ end -}}

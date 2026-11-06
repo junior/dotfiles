@@ -1,0 +1,48 @@
+{{- $lab := false -}}{{- if hasKey . "roles" }}{{ $lab = has "docker-engine" .roles }}{{ end -}}
+{{- $appliance := false -}}{{- if hasKey . "roles" }}{{ $appliance = has "appliance" .roles }}{{ end -}}
+{{ if and (eq .machine "mac-personal") (not $lab) (not $appliance) -}}
+#!/usr/bin/env bash
+# Load the launchd job local.peer-watch while ~/.config/peer-watch/hosts lists a
+# machine to watch, load it again when its plist changes, and unload it when the file
+# lists none. The job is opt-in: without that file it is never loaded.
+#
+# A plain run_ script, like the one for claude-signin: launchd can refuse the load
+# over ssh with nobody logged in at the Mac, so this checks at every apply, which
+# costs one `launchctl print`, and stays silent when nothing changes.
+set -u
+label=local.peer-watch
+plist="$HOME/Library/LaunchAgents/$label.plist"
+conf="$HOME/.config/peer-watch/hosts"
+target="gui/$(id -u)"
+stamp="${XDG_STATE_HOME:-$HOME/.local/state}/peer-watch/loaded"
+[ -f "$plist" ] || exit 0
+
+listed=0
+if [ -r "$conf" ]; then
+  listed=$(awk '!/^[[:space:]]*(#|$)/ && $1 != "home" && $1 != "after" && NF >= 2 {n++} END {print n + 0}' "$conf")
+fi
+
+if [ "$listed" -eq 0 ]; then
+  if launchctl print "$target/$label" >/dev/null 2>&1; then
+    launchctl bootout "$target/$label" >/dev/null 2>&1 || true
+    rm -f "$stamp"
+    echo ">>> peer-watch: no machine listed in ~/.config/peer-watch/hosts, so its launchd job is unloaded"
+  fi
+  exit 0
+fi
+
+want=$(shasum -a 256 "$plist" | cut -d' ' -f1)
+if launchctl print "$target/$label" >/dev/null 2>&1 && [ "$(cat "$stamp" 2>/dev/null)" = "$want" ]; then
+  exit 0
+fi
+launchctl bootout "$target/$label" >/dev/null 2>&1 || true
+for _ in 1 2 3; do
+  if launchctl bootstrap "$target" "$plist" 2>/dev/null; then
+    mkdir -p "${stamp%/*}" && echo "$want" > "$stamp"
+    echo ">>> peer-watch: its launchd job ($label) is loaded and checks $listed machine(s) every minute"
+    exit 0
+  fi
+  sleep 1
+done
+echo ">>> WARN: could not load $label; at the Mac, run: launchctl bootstrap $target $plist"
+{{ end -}}

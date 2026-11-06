@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  ~/Library/LaunchAgents/local.peer-watch.plist - managed by chezmoi, on a Mac that
+  runs the Claude desktop app. Every minute launchd runs `peer-watch check`, which
+  tells you when one of the machines listed in ~/.config/peer-watch/hosts stops
+  answering (see ~/.local/bin/peer-watch). run_after_load-peer-watch.sh loads it
+  only while that file lists a machine.
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>local.peer-watch</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>{{ .chezmoi.homeDir }}/.local/bin/peer-watch</string>
+		<string>check</string>
+	</array>
+	<key>StartInterval</key>
+	<integer>60</integer>
+	<key>RunAtLoad</key>
+	<true/>
+	<!-- Only in the logged-in GUI session: it posts notifications. -->
+	<key>LimitLoadToSessionType</key>
+	<string>Aqua</string>
+	<key>ProcessType</key>
+	<string>Background</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/usr/bin:/bin:/usr/sbin:/sbin</string>
+	</dict>
+	<key>StandardOutPath</key>
+	<string>{{ .chezmoi.homeDir }}/Library/Logs/peer-watch.launchd.log</string>
+	<key>StandardErrorPath</key>
+	<string>{{ .chezmoi.homeDir }}/Library/Logs/peer-watch.launchd.log</string>
+</dict>
+</plist>

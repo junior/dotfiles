@@ -1,0 +1,234 @@
+#!/usr/bin/env bash
+# peer-watch: a notification when one of your other machines stops answering, seen
+# from this Mac over your own network. No service and no account: nothing leaves the
+# house.
+#
+#   peer-watch                 each listed machine, answering or not, and since when
+#   peer-watch check           what the launchd job local.peer-watch runs every
+#                              minute: one probe per machine, a notification when one
+#                              has been quiet for 5 minutes and another when it is
+#                              back. Silent otherwise.
+#   peer-watch home            the `home` line for this network, for a Mac that travels
+#   peer-watch reminders on    also add a reminder to Reminders when a machine goes
+#                              quiet, so the phone gets it; it is marked done when the
+#                              machine is back. Run it at the Mac: macOS asks once to
+#                              let it control Reminders. `reminders off` stops them.
+#
+# The machines are listed in ~/.config/peer-watch/hosts, a file of your own that these
+# dotfiles never write. One entry per line:
+#
+#   NAME HOST [PORT]    NAME is what the notification says; HOST a name or an address
+#                       on your network; PORT a TCP port to try, such as 22 for a Mac
+#                       reached over ssh, and without one a ping.
+#   home GATEWAY        optional: watch only while this network's gateway is the one
+#                       `peer-watch home` printed at home, for a Mac that leaves the
+#                       house. Without it, the watch runs on any network.
+#   after SECONDS       optional: how long a machine may be quiet before the
+#                       notification (default 300).
+#
+# Lines starting with # are comments. Without the file, or with no machine in it, the
+# launchd job is not loaded. A Mac cannot report its own fall: another Mac, or Home
+# Assistant, watches this one.
+set -u
+
+conf=${PEER_WATCH_CONF:-$HOME/.config/peer-watch/hosts}
+state=${XDG_STATE_HOME:-$HOME/.local/state}/peer-watch
+now=${PEER_WATCH_NOW:-$(date +%s)}
+me=$(scutil --get LocalHostName 2>/dev/null || hostname -s)
+label=local.peer-watch
+after=300
+home=""
+names=()
+hosts=()
+ports=()
+
+when() { date -r "$1" '+%a %b %e %H:%M' | tr -s ' '; }
+span() { # seconds -> "2 h 5 min" or "7 min"
+  local s=$1
+  [ "$s" -lt 0 ] && s=0
+  if [ "$s" -ge 3600 ]; then echo "$((s / 3600)) h $((s % 3600 / 60)) min"
+  else echo "$((s / 60)) min"; fi
+}
+
+load() {
+  [ -r "$conf" ] || return 0
+  local name host port rest
+  while read -r name host port rest; do
+    case "$name" in '' | '#'*) continue ;; esac
+    case "$name" in
+      home) home=$host ;;
+      after) case "$host" in '' | *[!0-9]*) ;; *) after=$host ;; esac ;;
+      *)
+        # The name becomes a file name under the state folder.
+        case "$name" in *[!A-Za-z0-9._-]*) continue ;; esac
+        [ -n "$host" ] || continue
+        case "$port" in '#'*) port="" ;; esac
+        names+=("$name")
+        hosts+=("$host")
+        ports+=("$port")
+        ;;
+    esac
+  done < "$conf"
+}
+
+# This network's default gateway as "ADDRESS HARDWARE-ADDRESS", or nothing.
+gateway() {
+  if [ -n "${PEER_WATCH_GATEWAY+x}" ]; then echo "$PEER_WATCH_GATEWAY"; return 0; fi
+  local ip mac
+  ip=$(route -n get default 2>/dev/null | awk '/gateway:/ {print $2; exit}')
+  [ -n "$ip" ] || return 0
+  ping -c 1 -t 2 "$ip" >/dev/null 2>&1 # fills the ARP cache
+  mac=$(arp -n "$ip" 2>/dev/null | awk '{print $4; exit}')
+  case "$mac" in *:*) echo "$ip $mac" ;; *) echo "$ip" ;; esac
+}
+
+# 0 when the watch should run here: on a network at all, and on the home one when a
+# `home` line names it.
+here() {
+  local gw
+  gw=$(gateway)
+  [ -n "$gw" ] || return 1
+  [ -z "$home" ] && return 0
+  [ "${gw#* }" = "$home" ]
+}
+
+probe() { # host [port]
+  if [ -n "${PEER_WATCH_PROBE:-}" ]; then "$PEER_WATCH_PROBE" "$@"; return; fi
+  if [ -n "${2:-}" ]; then nc -z -G 3 "$1" "$2" >/dev/null 2>&1
+  else ping -c 1 -t 3 "$1" >/dev/null 2>&1; fi
+}
+
+notify() { # title message
+  if [ -n "${PEER_WATCH_NOTIFY:-}" ]; then "$PEER_WATCH_NOTIFY" "$1" "$2"; return 0; fi
+  osascript - "$1" "$2" >/dev/null 2>&1 <<'EOF' || true
+on run argv
+  display notification (item 2 of argv) with title (item 1 of argv) sound name "Glass"
+end run
+EOF
+}
+
+reminder_add() { # name since
+  [ -e "$state/reminders" ] || return 0
+  [ -n "${PEER_WATCH_NOTIFY:-}" ] && { "$PEER_WATCH_NOTIFY" reminder "$1"; return 0; }
+  osascript - "$1" "$(when "$2")" "$me" >/dev/null 2>&1 <<'EOF' || true
+on run argv
+  set tag to "peer-watch: " & (item 1 of argv)
+  tell application "Reminders"
+    make new reminder with properties {name:tag & " is not answering", body:"Quiet since " & (item 2 of argv) & ", as seen from " & (item 3 of argv) & "."}
+  end tell
+end run
+EOF
+}
+
+reminder_done() { # name
+  [ -e "$state/reminders" ] || return 0
+  [ -n "${PEER_WATCH_NOTIFY:-}" ] && { "$PEER_WATCH_NOTIFY" reminder-done "$1"; return 0; }
+  osascript - "$1" >/dev/null 2>&1 <<'EOF' || true
+on run argv
+  set tag to "peer-watch: " & (item 1 of argv)
+  tell application "Reminders"
+    repeat with r in (every reminder whose name starts with tag and completed is false)
+      set completed of r to true
+    end repeat
+  end tell
+end run
+EOF
+}
+
+check() {
+  load
+  [ "${#names[@]}" -gt 0 ] || return 0
+  # Offline, or away from home: nothing can be told, so nothing is recorded.
+  here || return 0
+  mkdir -p "$state" || return 0
+  # After a gap (this Mac asleep, off, or away), counting starts again: a machine
+  # is not called quiet for the hours this Mac was not looking.
+  local prev fresh=false i name ok
+  prev=$(cat "$state/last-check" 2>/dev/null || echo 0)
+  [ $((now - prev)) -gt 180 ] && fresh=true
+  echo "$now" > "$state/last-check"
+  for i in "${!names[@]}"; do
+    name=${names[$i]}
+    if probe "${hosts[$i]}" "${ports[$i]}"; then
+      if [ -e "$state/$name.down" ]; then
+        ok=$(cat "$state/$name.down" 2>/dev/null || echo "$now")
+        rm -f "$state/$name.down"
+        notify "$name is back" "It answers again, after $(span $((now - ok))) without an answer, as seen from $me."
+        reminder_done "$name"
+      fi
+      echo "$now" > "$state/$name.ok"
+    else
+      ok=$(cat "$state/$name.ok" 2>/dev/null || echo "")
+      if [ -z "$ok" ] || [ "$fresh" = true ]; then
+        [ -e "$state/$name.down" ] || echo "$now" > "$state/$name.ok"
+        continue
+      fi
+      if [ $((now - ok)) -ge "$after" ] && [ ! -e "$state/$name.down" ]; then
+        echo "$ok" > "$state/$name.down"
+        notify "$name is not answering" "No answer since $(when "$ok"), as seen from $me."
+        reminder_add "$name" "$ok"
+      fi
+    fi
+  done
+}
+
+status() {
+  load
+  if [ "${#names[@]}" -eq 0 ]; then
+    echo "peer-watch: no machines listed in ${conf/#$HOME/~}. Run peer-watch --help for the format."
+    return 0
+  fi
+  local i name ok
+  if launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1; then
+    echo "The job $label is loaded: a check every minute."
+  else
+    echo "The job $label is not loaded; chezmoi apply loads it."
+  fi
+  if ! here; then echo "Not on the home network, or not on a network: the job checks nothing here."; fi
+  for i in "${!names[@]}"; do
+    name=${names[$i]}
+    if probe "${hosts[$i]}" "${ports[$i]}"; then
+      echo "  $name: answering"
+    elif [ -e "$state/$name.down" ]; then
+      ok=$(cat "$state/$name.down")
+      echo "  $name: NOT answering since $(when "$ok"), notified"
+    else
+      echo "  $name: not answering"
+    fi
+  done
+}
+
+home_line() {
+  local gw
+  gw=$(gateway)
+  case "$gw" in
+    *' '*:*) echo "home ${gw#* }" ;;
+    *) echo "peer-watch: no gateway found on this network" >&2; return 1 ;;
+  esac
+}
+
+reminders_on() {
+  mkdir -p "$state" || return 1
+  if osascript -e 'tell application "Reminders" to count lists' >/dev/null 2>&1; then
+    touch "$state/reminders"
+    echo "Reminders on: a reminder when a machine goes quiet, marked done when it is back."
+  else
+    echo "peer-watch: Reminders refused; allow it in System Settings > Privacy & Security > Automation, then run this again" >&2
+    return 1
+  fi
+}
+
+case "${1:-}" in
+  '') status ;;
+  check) check ;;
+  home) home_line ;;
+  reminders)
+    case "${2:-}" in
+      on) reminders_on ;;
+      off) rm -f "$state/reminders"; echo "Reminders off: the ones already added stay." ;;
+      *) echo "usage: peer-watch reminders on|off" >&2; exit 2 ;;
+    esac
+    ;;
+  -h | --help) sed -n '2,/^set -u/p' "$0" | sed '$d; s/^# \{0,1\}//' ;;
+  *) echo "usage: peer-watch [check | home | reminders on|off | --help]" >&2; exit 2 ;;
+esac

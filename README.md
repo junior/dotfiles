@@ -82,6 +82,8 @@ so it cannot list something that is not actually installed.
 | `dot_config/claude-desktop/block-auto-updates.mobileconfig` | `~/.config/claude-desktop/` | mac: the configuration profile that blocks the Claude desktop app's own updater; installed once, by hand |
 | `dot_local/bin/executable_claude-signin` | `~/.local/bin/claude-signin` | mac, where the Claude desktop app runs: the age of the app's sign-in and when it is expected to lapse (`up` prints it); `check`, which the job below runs, warns 24 h, 4 h and 1 h before and when the app logs the refusal; `reminders on` adds the warnings to Reminders, for the phone |
 | `private_Library/LaunchAgents/local.claude-signin.plist.tmpl` | `~/Library/LaunchAgents/local.claude-signin.plist` | mac, where the Claude desktop app runs: the launchd job that runs `claude-signin check` every 15 minutes |
+| `dot_local/bin/executable_peer-watch` | `~/.local/bin/peer-watch` | mac, where the Claude desktop app runs: whether each machine listed in `~/.config/peer-watch/hosts` answers; `check`, which the job below runs, posts a notification when one has been quiet for 5 minutes and when it is back; `reminders on` adds reminders, for the phone ([Watching the other Macs](#watching-the-other-macs-peer-watch)) |
+| `private_Library/LaunchAgents/local.peer-watch.plist.tmpl` | `~/Library/LaunchAgents/local.peer-watch.plist` | mac, where the Claude desktop app runs: the launchd job that runs `peer-watch check` every minute, loaded only while the list names a machine |
 | `dot_local/bin/executable_vaults` | `~/.local/bin/vaults` | one status line per Obsidian vault (changes, commits to push or pull, last commit) and `vaults pull` for all of them; POSIX sh, not on linux-minimal |
 | `dot_zshenv.tmpl` | `~/.zshenv` | mac: `KUBECONFIG`, `GOPATH` under `~/.local/share/go`, and `~/.local/bin` and Go's bin for every zsh, coding agents' and ssh commands' included; on a `docker-engine` or `appliance` machine also the Homebrew PATH that ssh commands need |
 | `private_dot_ssh/private_config` | `~/.ssh/config` | WSL-only: overlay include + keepalives for stateful-firewall networks |
@@ -101,6 +103,8 @@ so it cannot list something that is not actually installed.
 | `run_after_unload-concierge.sh.tmpl` | - | mac: unloads the concierge's launchd job where it still runs, once `.chezmoiremove` has taken its plist, script and folder (the concierge was dropped on 2026-11-01) |
 | `run_after_load-claude-signin.sh.tmpl` | - | mac, where the Claude desktop app runs: loads the `claude-signin` job, and again when its plist changes; silent when it is loaded and current |
 | `run_after_unload-claude-signin.sh.tmpl` | - | mac, on a lab node or an appliance, where the Claude desktop app does not run: unloads the `claude-signin` job and removes its script and plist, left there by an apply from before the role; silent when there are none |
+| `run_after_load-peer-watch.sh.tmpl` | - | mac, where the Claude desktop app runs: loads the `peer-watch` job while `~/.config/peer-watch/hosts` lists a machine, again when its plist changes, and unloads it when the list is gone; silent when nothing changes |
+| `run_after_unload-peer-watch.sh.tmpl` | - | mac, on a lab node or an appliance: unloads the `peer-watch` job and removes its script and plist, left there by an apply from before the role; the list stays; silent when there are none |
 | `run_pin-self-updating-casks.sh.tmpl` | - | Pins casks that update themselves, so brew never fights their updater (mac); `up` names any app that falls behind, and `cask-update` updates it |
 | `gen-tools.py` | `TOOLS.md` | Regenerates the tool inventory; `--check` fails if the file is stale |
 | `.chezmoi.toml.tmpl` | chezmoi config | Prompts once on init: the machine, and for linux-minimal a bigger filesystem and optional extras |
@@ -429,6 +433,40 @@ signed in at its Mac, with that user's files and keys, so treat everything it re
 from outside (an issue, a page, a message from another session) as data, and keep
 deletes and anything public behind your own word, typed in the session that does
 them.
+
+### Watching the other Macs (peer-watch)
+
+A Mac cannot tell you that it has gone down, so another one has to. `peer-watch`
+does that from a personal Mac that runs the desktop app, over your own network:
+no service, no account, nothing that leaves the house. Every minute its launchd
+job tries each machine you list. When one has not answered for five minutes it
+posts a notification, and another when the machine is back. `peer-watch reminders
+on`, run once at the Mac, adds a reminder too, which reaches the phone through
+iCloud, and marks it done when the machine answers again.
+
+It is opt-in. The list is a file of your own, `~/.config/peer-watch/hosts`, which
+these dotfiles never write, and the job is loaded only while it lists a machine:
+
+```
+# NAME   HOST          PORT: a TCP port to try; without one, a ping
+desk     desk.lan
+lab      lab.lan       22
+# On a Mac that leaves the house: watch only on the home network.
+# This line comes from `peer-watch home`, run at home.
+home     0:11:22:33:44:55
+```
+
+Run `chezmoi apply` (or `up`) after editing it, so that the job is loaded or
+unloaded; `peer-watch` alone shows each machine and whether it answers. A Mac
+with the firewall's stealth mode on ignores pings: give it a port it answers on,
+such as 22 when Remote Login is on. List only machines that stay on, since one
+that sleeps or is switched off by design only cries wolf. Two Macs that list each
+other cover either one going down; a Mac nobody lists is watched by nobody. What
+nothing inside can see is the whole house going down, power or internet; your
+router's own app may.
+
+Lab nodes and appliances run no watch, because nobody reads their notifications:
+they are what the others list.
 
 ## Kubeconfigs (kcx)
 

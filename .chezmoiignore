@@ -76,9 +76,11 @@ ensure-ssh-include.sh
 # The Claude desktop app runs only on the personal Macs that are not lab nodes:
 # the profile that blocks its own updater, and the watch on its sign-in, have nothing
 # to do anywhere else. ~/Library stays out of chezmoi's hands entirely there, so its
-# mode (0700 on a Mac) is never touched.
+# mode (0700 on a Mac) is never touched. peer-watch goes with them: it watches the
+# other machines from a Mac someone reads the notifications of.
 .config/claude-desktop
 .local/bin/claude-signin
+.local/bin/peer-watch
 Library
 {{- end }}
 {{- /* An appliance declares no casks, so it does not get cask-update either. */}}
