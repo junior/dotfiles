@@ -2,7 +2,10 @@
 # tmux-tidy — show, and with -f kill, the tmux sessions you are not attached to.
 # Never touches the session you are in, nor "main", the session every login
 # joins (see ~/.bashrc); remove that one with: tmux kill-session -t main.
-# Managed by chezmoi.
+# Nor a session with a program running in it: killing a session takes the
+# terminal from its programs, and one that ignores the hangup keeps running
+# without it (a full-screen one spins), so -f kills only the sessions whose
+# panes all sit at a shell prompt. Managed by chezmoi.
 set -eu
 force=0
 [ "${1:-}" = "-f" ] && force=1
@@ -18,12 +21,23 @@ tmux list-sessions -F '  #{session_name}  windows=#{session_windows}  attached=#
 strays=$(tmux list-sessions -F '#{session_attached} #{session_name}' 2>/dev/null |
   awk -v cur="$cur" '{ a = $1; sub(/^[^ ]* /, "") } a == 0 && $0 != "main" && $0 != cur' || true)
 if [ -z "$strays" ]; then printf '\nnothing unattached to clean up (keeping %s).\n' "$keeping"; exit 0; fi
+# What runs in a session's panes besides a shell at its prompt; empty means idle.
+running() {
+  tmux list-panes -s -t "=$1" -F '#{pane_dead} #{pane_current_command}' 2>/dev/null |
+    awk '$1 == 0 && $2 !~ /^(ba|da|z|k|c|tc|fi|a)?sh$/ { print $2 }' | sort -u | paste -sd, -
+}
 printf '\nunattached (keeping %s):\n' "$keeping"
-printf '%s\n' "$strays" | sed 's/^/  /'
+printf '%s\n' "$strays" | while IFS= read -r s; do
+  r=$(running "$s")
+  if [ -n "$r" ]; then printf '  %s  (running %s: kept)\n' "$s" "$r"; else printf '  %s\n' "$s"; fi
+done
 if [ "$force" = 1 ]; then
   # "=NAME" is that name only: a session that is already gone never falls back to
   # another whose name starts with it (a stray "ma" must not take "main" with it).
-  printf '%s\n' "$strays" | while IFS= read -r s; do [ -n "$s" ] && tmux kill-session -t "=$s" && echo "killed $s"; done
+  printf '%s\n' "$strays" | while IFS= read -r s; do
+    [ -n "$s" ] && [ -z "$(running "$s")" ] || continue
+    tmux kill-session -t "=$s" && echo "killed $s"
+  done
 else
-  printf '\nrun  tmux-tidy -f  to kill those. Attach instead with: tmux attach -t NAME\n'
+  printf '\nrun  tmux-tidy -f  to kill the idle ones. Attach instead with: tmux attach -t NAME\n'
 fi

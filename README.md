@@ -193,9 +193,11 @@ What it does differently:
   for every connection that drops. In the first shell of such a session the
   bashrc folds it into one called `main`: a new login lands in `main`, a
   second terminal open at the same time gets a session of its own that closes
-  with it, and `tmux switch -t main` moves a terminal to `main`; `tmux-tidy`
-  never kills `main`. Elsewhere it does nothing: it acts only when the login
-  shell itself became tmux under sshd.
+  with it, and `tmux switch -t main` moves a terminal to `main`. `tmux-tidy -f`
+  never kills `main`, nor a session with a program running in it: a program
+  that loses its terminal can go on running without one. Elsewhere the fold
+  does nothing: it acts only when the login shell itself became tmux under
+  sshd.
 - **Optional extras** are a comma-separated answer at init. `krew` adds the
   kubectl plugin manager and the plugin list from the other machines; it needs
   git, and is skipped with a message on hosts that have none. `blesh` adds
