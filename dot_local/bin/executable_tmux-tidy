@@ -1,21 +1,29 @@
 #!/bin/sh
 # tmux-tidy — show, and with -f kill, the tmux sessions you are not attached to.
-# Never touches the session you are in. Managed by chezmoi.
+# Never touches the session you are in, nor "main", the session every login
+# joins (see ~/.bashrc); remove that one with: tmux kill-session -t main.
+# Managed by chezmoi.
 set -eu
 force=0
 [ "${1:-}" = "-f" ] && force=1
 command -v tmux >/dev/null 2>&1 || { echo "tmux-tidy: no tmux here" >&2; exit 1; }
-keep=""
-[ -n "${TMUX:-}" ] && keep=$(tmux display-message -p '#S' 2>/dev/null || true)
+cur=""
+[ -n "${TMUX:-}" ] && cur=$(tmux display-message -p '#S' 2>/dev/null || true)
+keeping=main
+[ -n "$cur" ] && [ "$cur" != main ] && keeping="main and $cur"
 printf 'sessions:\n'
 tmux list-sessions -F '  #{session_name}  windows=#{session_windows}  attached=#{session_attached}' 2>/dev/null || {
   echo "  (no server running)"; exit 0; }
-strays=$(tmux list-sessions -F '#{session_attached} #{session_name}' 2>/dev/null | awk '$1==0{print $2}' | grep -vx "${keep:-__none__}" || true)
-if [ -z "$strays" ]; then printf '\nnothing unattached to clean up.\n'; exit 0; fi
-printf '\nunattached%s:\n' "${keep:+ (keeping $keep)}"
+# Unattached sessions by their whole name (a name may hold spaces), minus the kept ones.
+strays=$(tmux list-sessions -F '#{session_attached} #{session_name}' 2>/dev/null |
+  awk -v cur="$cur" '{ a = $1; sub(/^[^ ]* /, "") } a == 0 && $0 != "main" && $0 != cur' || true)
+if [ -z "$strays" ]; then printf '\nnothing unattached to clean up (keeping %s).\n' "$keeping"; exit 0; fi
+printf '\nunattached (keeping %s):\n' "$keeping"
 printf '%s\n' "$strays" | sed 's/^/  /'
 if [ "$force" = 1 ]; then
-  printf '%s\n' "$strays" | while read -r s; do [ -n "$s" ] && tmux kill-session -t "$s" && echo "killed $s"; done
+  # "=NAME" is that name only: a session that is already gone never falls back to
+  # another whose name starts with it (a stray "ma" must not take "main" with it).
+  printf '%s\n' "$strays" | while IFS= read -r s; do [ -n "$s" ] && tmux kill-session -t "=$s" && echo "killed $s"; done
 else
   printf '\nrun  tmux-tidy -f  to kill those. Attach instead with: tmux attach -t NAME\n'
 fi
