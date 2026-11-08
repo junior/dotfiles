@@ -188,6 +188,14 @@ What it does differently:
 - **The tmux config is generated for the tmux found at apply time**, because
   the mouse, copy-mode and styling syntax all changed between 2.1 and 2.9 and
   a jump host may well run 2.7.
+- **One tmux session per login.** Some hardened hosts start tmux from the
+  system profile at every ssh login, which leaves a numbered session behind
+  for every connection that drops. In the first shell of such a session the
+  bashrc folds it into one called `main`: a new login lands in `main`, a
+  second terminal open at the same time gets a session of its own that closes
+  with it, and `tmux switch -t main` moves a terminal to `main`. Elsewhere it
+  does nothing: it acts only when the login shell itself became tmux under
+  sshd.
 - **Optional extras** are a comma-separated answer at init. `krew` adds the
   kubectl plugin manager and the plugin list from the other machines; it needs
   git, and is skipped with a message on hosts that have none. `blesh` adds

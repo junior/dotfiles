@@ -10,6 +10,44 @@
 
 case $- in *i*) ;; *) return ;; esac        # interactive shells only
 
+# --- one tmux session per login, not one per connection ----------------------
+# Some hardened hosts start tmux from the system profile at every ssh login (a
+# bare `exec tmux` under sshd), so each connection opens a new numbered session
+# and a dropped one leaves its session behind, idle. In the first shell of such
+# a session, before anything slow loads, this folds it into the session "main":
+# the terminal moves to "main" when that is free and the new session closes;
+# with no "main" yet, the new session becomes it; when "main" is open in another
+# terminal, the new session stays separate and closes when its terminal does.
+# Nothing leaves tmux, so the host's own tmux settings still apply.
+_tmux_fold_login() {
+  local sid nwin npane natt pid name ctty cpid ppid_ parent matt mid
+  read -r sid nwin npane natt pid name < <(tmux display-message -p -t "$TMUX_PANE" \
+    '#{session_id} #{session_windows} #{window_panes} #{session_attached} #{pane_pid} #{session_name}' 2>/dev/null) || return 0
+  # Only the first shell of a fresh numbered session with one terminal on it...
+  [ "$pid" = "$$" ] && [ "$nwin" = 1 ] && [ "$npane" = 1 ] && [ "$natt" = 1 ] || return 0
+  case $name in ''|*[!0-9]*) return 0 ;; esac
+  # ...and only when that terminal is the tmux a login shell became under sshd.
+  read -r ctty cpid < <(tmux list-clients -t "$sid" -F '#{client_tty} #{client_pid}' 2>/dev/null) || return 0
+  ppid_=$(ps -o ppid= -p "$cpid" 2>/dev/null) || return 0
+  parent=$(ps -o comm= -p "${ppid_// /}" 2>/dev/null) || return 0
+  case $parent in sshd*|login) ;; *) return 0 ;; esac
+  read -r matt mid < <(tmux list-sessions -F '#{session_attached} #{session_id} #{session_name}' 2>/dev/null |
+    awk '{ a = $1; i = $2; sub(/^[^ ]* [^ ]* /, "") } $0 == "main" { print a, i; exit }')
+  if [ -z "$mid" ]; then
+    tmux rename-session -t "$sid" main
+  elif [ "$matt" = 0 ]; then
+    tmux switch-client -c "$ctty" -t "$mid" && tmux kill-session -t "$sid"
+  else
+    tmux set-option -t "$sid" destroy-unattached on
+    echo 'tmux: "main" is open in another terminal, so this session is separate and closes with this terminal. To join main: tmux switch -t main'
+  fi
+}
+if [ -n "${TMUX:-}" ] && [ -n "${TMUX_PANE:-}" ] && [ -z "${TMUX_LOGIN_CHECKED:-}" ] && command -v tmux >/dev/null 2>&1; then
+  export TMUX_LOGIN_CHECKED=1      # once per shell, even after `exec bash -l`
+  _tmux_fold_login
+fi
+unset -f _tmux_fold_login
+
 # --- ble.sh: fish-style autosuggestions and highlighting for bash -------------
 # Loaded first with --attach=none and attached at the very end, as its docs ask.
 if [ -r "$HOME/.local/share/blesh/ble.sh" ]; then
@@ -337,6 +375,8 @@ this profile
                     cat > file.yaml <<'EOF'      then paste, then EOF
   vim paste       F9 toggles paste mode, or :set paste
   tmux sessions   tmux ls | tmux-tidy | tmux-tidy -f
+  tmux logins     where the host starts tmux at every login, a login joins the
+                  session main; tmux switch -t main moves a terminal there
   history         Up/Down search on what you typed; Ctrl-R fuzzy (fzf)
   autosuggest     grey text after the cursor is ble.sh predicting from history;
                   Right arrow or End accepts it
