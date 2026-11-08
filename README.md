@@ -204,6 +204,9 @@ What it does differently:
   [ble.sh](https://github.com/akinomyoga/ble.sh), fish-style autosuggestions
   from history (grey text after the cursor, Right arrow accepts) and syntax
   highlighting; it replaces bash's line editing, so it is a choice per host.
+  Where it runs, the shell keeps the newest 10,000 commands in memory rather
+  than 100,000: ble.sh searches them for every suggestion, and on an old bash
+  that many made each prompt lag. The history file keeps 200,000 lines.
   `python` adds a current Python from mise (a precompiled build, so still no
   compiler and no root) plus [uv](https://docs.astral.sh/uv/). It exists
   because enterprise distros ship a `python3` years out of support (3.6 on

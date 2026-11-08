@@ -73,7 +73,16 @@ export PATH
 set +H
 
 # --- history: large, timestamped, shared across panes ---
+{{ if $big -}}
+# The file first: assigning HISTFILESIZE trims the file HISTFILE names at that
+# moment, so set the other way round the copy on the large filesystem was never
+# trimmed.
+HISTFILE="{{ $big }}/state/bash_history"
+{{ end -}}
 HISTSIZE=100000
+# ble.sh loads the history kept in memory and searches it for every suggestion;
+# on an old bash, 100000 lines of it made every prompt lag, so keep fewer.
+[ -n "${BLE_VERSION-}" ] && HISTSIZE=10000
 HISTFILESIZE=200000
 HISTCONTROL=ignoreboth:erasedups
 HISTTIMEFORMAT='%F %T  '
@@ -96,7 +105,6 @@ shopt -s checkwinsize cdspell dirspell autocd globstar no_empty_cmd_completion 2
 export XDG_CACHE_HOME="{{ $big }}/cache"
 export XDG_STATE_HOME="{{ $big }}/state"
 export KUBECACHEDIR="{{ $big }}/kube-cache"      # else kubectl fills ~/.kube/cache
-HISTFILE="{{ $big }}/state/bash_history"
 export KREW_ROOT="{{ $big }}/krew"              # kubectl plugins live there, not in ~/.krew
 # A noexec /tmp (common under CIS hardening) breaks anything that unpacks and then
 # runs from TMPDIR. Point it somewhere executable on the same large filesystem.
