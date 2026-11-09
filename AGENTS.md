@@ -98,6 +98,12 @@ maintainer's own tools: leave them alone.
 Upstream only: the maintainer's changes, and changes proposed to upstream.
 
 - Edit the source (`chezmoi cd`), never a live file.
+- A command-line tool added to the Mac's Brewfile also goes in the mise
+  config's Intel block when its project publishes an Intel macOS build, and its
+  Brewfile line takes the `# Intel, from mise:` prefix that comments it out
+  there. With no Intel build anywhere, an Intel Mac compiles it from source
+  once, when it first installs it (`up` never upgrades formulae there), so
+  leave it out on Intel when it is not worth that, as the Brewfile does lnav.
 - Branch templates on profiles (`.machine`), roles, `.chezmoi.arch` or
   `.chezmoi.os`, never on a machine's name. Read optional data through `hasKey`: a
   missing key stops the template.

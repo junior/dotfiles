@@ -14,7 +14,9 @@
 # mise global config — managed by chezmoi
 # Shared: language runtimes with per-project version sensitivity.
 # Per-machine: WSL uses mise for the full toolchain (no Homebrew there);
-# Mac uses mise only for languages + npm globals — everything else is Homebrew.
+# an Apple-silicon Mac uses mise only for languages + npm globals — everything
+# else is Homebrew. An Intel Mac also takes its command-line tools from mise
+# (the Intel block below): Homebrew builds no Intel bottles.
 [settings]
 # Precompiled pythons only (python-build-standalone). Source builds break on
 # brand-new macOS SDKs (e.g. unguarded pipe2 on SDK 26.x) and need no toolchain;
