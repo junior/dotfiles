@@ -81,22 +81,36 @@
 {{- end -}}
 
 {{ if eq $machine "linux-minimal" -}}
+{{- /* Where the scripts run. chezmoi sets up its script runner before `chezmoi init`
+       writes this file, so the run that writes it (the first `init --apply`) never
+       sees scriptTempDir and writes its scripts to $TMPDIR, or /tmp. It does see
+       [scriptEnv]: init exports that into chezmoi's own environment. So TMPDIR
+       below is set on every linux-minimal host, and its directory is made here,
+       before the first script is written: neither a noexec /tmp nor a missing
+       $BIG/tmp can then stop that first apply. */ -}}
+{{- $scriptTmp := printf "%s/.chezmoi-tmp" .chezmoi.homeDir -}}
+{{- if $bigdisk }}{{ $scriptTmp = printf "%s/tmp" $bigdisk }}{{ end -}}
+{{- $_ := output "sh" "-c" "mkdir -p \"$1\" 2>/dev/null; exit 0" "sh" $scriptTmp -}}
 # chezmoi writes run_ scripts into a temp directory and executes them there.
 # Hardened hosts mount /tmp with noexec, which makes every script fail with
 # "permission denied", so keep them under $HOME instead. Deliberately NOT inside
 # ~/.local or ~/.cache: those two are the ones the bigdisk script relocates, and
 # a script must not have its own file moved out from under it while it runs.
 scriptTempDir = {{ (printf "%s/.chezmoi-tmp" .chezmoi.homeDir) | quote }}
-{{ if $bigdisk }}
+
 # The scripts themselves are tiny, but what they download is not: a mise tarball
 # is 42 MB, the gadget kubectl plugin more, and krew keeps its whole store under
 # KREW_ROOT. On a host whose home has tens of MB free, all of that must land on
-# the big filesystem. This is the environment every run_ script inherits.
+# the big filesystem. This is the environment every run_ script inherits. With
+# no big filesystem, TMPDIR is the scripts' own directory in $HOME: a noexec /tmp
+# would break whatever a script unpacks and then runs (krew's bootstrap).
 [scriptEnv]
-    TMPDIR = {{ (printf "%s/tmp" $bigdisk) | quote }}
+    TMPDIR = {{ $scriptTmp | quote }}
+{{- if $bigdisk }}
     MISE_TMP_DIR = {{ (printf "%s/tmp" $bigdisk) | quote }}
     KREW_ROOT = {{ (printf "%s/krew" $bigdisk) | quote }}
-{{ end }}
+{{- end }}
+
 {{ end -}}
 [data]
     machine = {{ $machine | quote }}
