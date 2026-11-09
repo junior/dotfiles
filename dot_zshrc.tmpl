@@ -407,6 +407,17 @@ up() {
     # drop the roll-call, and let the category summary below carry the shape of
     # the toolchain instead. A failure prints the whole log untouched.
     local _bundle=$(mktemp)
+{{- if and (eq .chezmoi.os "darwin") (eq .chezmoi.arch "amd64") }}
+    # An Intel Mac: Homebrew builds no Intel bottles any more, so upgrading a
+    # formula here compiles it from source, often behind Rust and LLVM, for hours.
+    # Its command-line tools come from mise (decisions 0006 and 0026 in the vault);
+    # Homebrew keeps the casks, and the few formulae left stay at the versions that
+    # work. So bundle installs what is missing without upgrading, and only casks
+    # are upgraded.
+    if brew update && brew bundle install --global --no-upgrade >"$_bundle" 2>&1; then
+      grep -vE '^Using ' "$_bundle" || true
+      HOMEBREW_NO_ASK=1 brew upgrade --cask && brew cleanup
+{{- else }}
     if brew update && brew bundle install --global >"$_bundle" 2>&1; then
       grep -vE '^Using ' "$_bundle" || true
       # One pass: a bare `brew upgrade` covers formulae AND casks. A second
@@ -415,6 +426,7 @@ up() {
       # on by default in a terminal, stops a bare `brew upgrade` for a yes whenever
       # anything is outdated; running `up` is already that yes.
       HOMEBREW_NO_ASK=1 brew upgrade && brew cleanup
+{{- end }}
     else
       command cat "$_bundle"
     fi

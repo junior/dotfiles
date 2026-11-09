@@ -151,13 +151,72 @@ opentofu = "latest"
 # java = "temurin-21"
 {{- if eq .chezmoi.arch "amd64" }}
 
+# INTEL ONLY. Homebrew stopped building Intel bottles in September 2026, so a
+# formula upgrade on an Intel Mac compiles from source, often behind Rust and
+# LLVM. Every command-line tool below has an Intel Mac binary from its own
+# project, which is what mise fetches, and the Brewfile comments it out on Intel
+# (decisions 0006 and 0026 in the vault). Each was installed and run on an Intel
+# Mac on 2026-11-09. mise itself arrives the same way, from
+# run_install-mise-intel-mac.sh. On Apple silicon all of these stay in the
+# Brewfile and this does not render.
+
+# --- Kubernetes / cloud-native ---
+calicoctl  = "latest"
+cilium-cli = "latest"
+cosign     = "latest"
+dive       = "latest"
+grpcurl    = "latest"
+grype      = "latest"
+helm       = "latest"
+istioctl   = "latest"
+k3d        = "latest"
+k9s        = "latest"
+kind       = "latest"
+krew       = "latest"
+kubecolor  = "latest"
+# kubectl came to the Mac as a dependency of the Homebrew kubecolor; here it is
+# named, as on wsl-work.
+kubectl    = "latest"
+kubeshark  = "latest"
+minikube   = "latest"
+operator-sdk = "latest"
+stern      = "latest"
+syft       = "latest"
+trivy      = "latest"
+# Not in mise's registry: the github backend takes the release asset.
+"github:falcosecurity/falcoctl"          = "latest"
+"github:kubernetes-sigs/ingress2gateway" = "latest"
+"github:vladimirvivien/ktop"             = "latest"
+# kcx from its release, as on wsl-work: the Homebrew tap builds it from source.
+"github:junior/kcx"                      = "latest"
+
 # --- Dev utilities ---
-# INTEL ONLY. Homebrew stopped building Intel bottles in September 2026
-# (decision 0006 in the vault) and uv needs the Rust toolchain, so LLVM first.
-# Upstream ships an Intel Mac binary, which is what mise fetches here. mise
-# itself arrives the same way, from run_install-mise-intel-mac.sh. On Apple
-# silicon uv stays in the Brewfile and this does not render.
-uv        = "latest"
+bat        = "latest"
+chezmoi    = "latest"
+direnv     = "latest"
+duf        = "latest"
+eza        = "latest"
+fd         = "latest"
+fx         = "latest"
+fzf        = "latest"
+gh         = "latest"
+git-filter-repo = "latest"
+"pipx:httpie" = "latest"
+jq         = "latest"
+mkcert     = "latest"
+pipx       = "latest"
+ripgrep    = "latest"
+terraform-docs = "latest"
+tfsec      = "latest"
+tmux       = "latest"
+uv         = "latest"
+yq         = "latest"
+zoxide     = "latest"
+"github:asciinema/asciinema" = "latest"
+"github:asciinema/agg"       = "latest"
+"github:andreazorzetto/yh"   = "latest"
+# skilla is one script; its release carries it as the `skilla` file, as on wsl-work.
+"github:junior/skilla"       = "latest"
 {{- end }}
 {{- end }}
 
