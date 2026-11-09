@@ -268,7 +268,7 @@ machine is FOR, not by what happens to be installed on it:
 | --- | --- | --- |
 | *(blank)* | an ordinary workstation, which is the common case | nothing |
 | `session-host` | the machine runs long-lived agent sessions others connect to | the stable Claude Code cask instead of `claude-code@latest`; the sessions themselves are the Claude desktop app's ([Hosting sessions](#hosting-sessions-session-host), below) |
-| `docker-engine` | other machines run builds on this one's Docker engine over ssh | a PATH line in `~/.zshenv`, so a non-interactive `ssh host command` can find `docker`; `kcx add` refuses there, a lab node holding no credentials |
+| `docker-engine` | other machines run builds on this one's Docker engine over ssh | a PATH line in `~/.zshenv`, so a non-interactive `ssh host command` can find `docker`; `kcx add` refuses there, a lab node holding no credentials; its command-line tools from mise, not Homebrew, and `up` upgrading only casks there ([A lab node's tools: boring wins](#a-lab-nodes-tools-boring-wins), below) |
 | `secrets` | the machine holds credentials provisioned from a password manager | the templates that write those files |
 | `appliance` | the machine only runs a service (a VM host, a box for one assistant), is reached over ssh, and holds no credentials and no agent sessions | a short allow-list Brewfile instead of the desktop one (shell, completions and a core CLI; no taps, casks, cloud CLIs, gh, 1Password, coding agents or Docker), no tools from the mise config, the PATH line in `~/.zshenv` that `docker-engine` gets, and none of the Claude desktop, cask-pin, tap-trust or krew scripts. It wins over any role it is combined with. A machine's own extras go in `~/.Brewfile.local` and `~/.config/mise/conf.d/` |
 
@@ -278,6 +278,31 @@ installed: chezmoi leaves a file it stops managing, and `brew bundle` never
 uninstalls. `claude-signin` is the exception, its launchd job being the one
 thing that would go on running: `run_after_unload-claude-signin.sh` unloads the
 job and removes the script and its plist.
+
+### A lab node's tools: boring wins
+
+A lab node (`docker-engine`) is a server, and on a server boring wins. Its
+command-line tools come from mise, on any chip: each one is the project's own
+release build, kept in the home folder, with no shared library tree to move
+under it. Homebrew keeps what only comes as a cask there (Docker Desktop, the
+coding agents' CLIs), the shell's plugins and theme, and the few tools with no
+build for that chip, and `up` upgrades only casks, Docker Desktop's pinned, so
+nothing changes under a running engine but what mise replaces whole. The
+Brewfile comments each of those formulae out there (`# from mise here:`), and
+the mise config's block for Intel Macs and lab nodes installs them. git-lfs,
+lnav, vhs and vsce stay off: a headless engine host does not need every comfort.
+
+An Intel Mac takes its tools the same way for another reason: Homebrew has
+built no Intel bottles since September 2026, so a formula upgrade there would
+compile from source, often behind Rust and LLVM.
+
+mise asks GitHub's API about the tools it takes from GitHub releases, and a
+machine with no GitHub token gets 60 calls an hour, about four `up` runs; a
+tool that fails for it installs on the next `up`. A Mac that takes the role
+later keeps its Homebrew formulae, as above: once mise has installed their
+replacements, `brew bundle cleanup --global --force` removes them, except
+those of a tap the machine has not trusted, which `brew uninstall` takes by
+name.
 
 An appliance exists for its service, and `up` upgrades every formula. `brew
 upgrade` removes the old version of each formula it upgrades, with or without a

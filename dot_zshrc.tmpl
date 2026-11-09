@@ -407,10 +407,11 @@ up() {
     # drop the roll-call, and let the category summary below carry the shape of
     # the toolchain instead. A failure prints the whole log untouched.
     local _bundle=$(mktemp)
-{{- if and (eq .chezmoi.os "darwin") (eq .chezmoi.arch "amd64") }}
-    # An Intel Mac: Homebrew builds no Intel bottles any more, so upgrading a
-    # formula here compiles it from source, often behind Rust and LLVM, for hours.
-    # Its command-line tools come from mise (decisions 0006 and 0026 in the vault);
+{{- if and (eq .chezmoi.os "darwin") (or (eq .chezmoi.arch "amd64") (and (hasKey . "roles") (has "docker-engine" .roles))) }}
+    # An Intel Mac or a lab node (role docker-engine). Its command-line tools come
+    # from mise (decisions 0006, 0026 and 0027 in the vault): on a lab node, a
+    # server, because boring wins; on Intel, because Homebrew builds no Intel
+    # bottles any more, so a formula upgrade compiles from source for hours.
     # Homebrew keeps the casks, and the few formulae left stay at the versions that
     # work. So bundle installs what is missing without upgrading, and only casks
     # are upgraded.

@@ -19,14 +19,21 @@
        formula with no bottle is compiled here, and a few of them drag in Rust and
        LLVM first: hours, repeated on every toolchain release. Those come from their
        own prebuilt binaries through mise instead; see decision 0006 in the vault.
-       Since 2026-11-09 (decision 0026) that is every formula mise can supply: its
-       line starts with "# Intel, from mise:" there, which comments it out, and the
-       Intel block of the mise config installs it; on Apple silicon the line renders
-       as before. What Homebrew keeps on Intel is the casks and a few formulae with
-       no Intel binary anywhere, which stay at the versions that work: `up` upgrades
-       only casks there, so nothing needs pinning. Keyed on the architecture, never on
-       a machine name, like the casks below. */ -}}
+       Since 2026-11-09 (decision 0026) that is every formula mise can supply.
+       Keyed on the architecture, never on a machine name, like the casks below. */ -}}
 {{- $intel := eq .chezmoi.arch "amd64" -}}
+{{- /* A LAB NODE (role docker-engine) is a server, and on a server boring wins: its
+       command-line tools come from mise on any chip, each the project's own release
+       build, with no shared library tree to move under them (decision 0027 in the
+       vault). So on an Intel Mac or a lab node each formula mise can supply starts
+       with "# from mise here:", which comments it out, and the mise config's block
+       for both installs it; elsewhere the line renders as before. yh has no
+       Apple-silicon build, so only Intel takes it from mise. What Homebrew keeps on
+       such a Mac is the casks and the formulae with no build for its chip, which
+       stay at the versions that work: `up` upgrades only casks there, so nothing
+       needs pinning. git-lfs, lnav, vhs and vsce are not on such a Mac at all: a
+       headless engine host does not need every comfort. */ -}}
+{{- $fromMise := or $intel $lab -}}
 {{- /* An APPLIANCE gets its own short list and nothing below it. It wins over any
        role it is combined with, as the lab node wins over session-host. */ -}}
 {{- $appliance := false -}}{{- if hasKey . "roles" }}{{ $appliance = has "appliance" .roles }}{{ end -}}
@@ -107,66 +114,66 @@ brew "zsh-syntax-highlighting"
 {{ if not $lab }}cask "vercel"{{ end }}   # a cask since homebrew-core moved it there: Vercel's native build, no node
 
 # --- Formulae: kubernetes / cloud-native ---
-{{ if $intel }}# Intel, from mise: {{ end }}brew "calicoctl"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "cilium-cli"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "cosign"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "dive"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "falcoctl"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "grpcurl"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "grype"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "helm"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "ingress2gateway"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "istioctl"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "k3d"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "k9s"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "kind"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "krew"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "ktop"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "kubecolor"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "junior/tap/kcx"   # kcx: one kubeconfig file per cluster, contexts and namespaces, profiles, a read-only shell; built from source, its tap is trusted in run_trust-taps.sh
-{{ if $intel }}# Intel, from mise: {{ end }}brew "kubeshark"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "minikube"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "operator-sdk"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "stern"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "syft"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "trivy"
+{{ if $fromMise }}# from mise here: {{ end }}brew "calicoctl"
+{{ if $fromMise }}# from mise here: {{ end }}brew "cilium-cli"
+{{ if $fromMise }}# from mise here: {{ end }}brew "cosign"
+{{ if $fromMise }}# from mise here: {{ end }}brew "dive"
+{{ if $fromMise }}# from mise here: {{ end }}brew "falcoctl"
+{{ if $fromMise }}# from mise here: {{ end }}brew "grpcurl"
+{{ if $fromMise }}# from mise here: {{ end }}brew "grype"
+{{ if $fromMise }}# from mise here: {{ end }}brew "helm"
+{{ if $fromMise }}# from mise here: {{ end }}brew "ingress2gateway"
+{{ if $fromMise }}# from mise here: {{ end }}brew "istioctl"
+{{ if $fromMise }}# from mise here: {{ end }}brew "k3d"
+{{ if $fromMise }}# from mise here: {{ end }}brew "k9s"
+{{ if $fromMise }}# from mise here: {{ end }}brew "kind"
+{{ if $fromMise }}# from mise here: {{ end }}brew "krew"
+{{ if $fromMise }}# from mise here: {{ end }}brew "ktop"
+{{ if $fromMise }}# from mise here: {{ end }}brew "kubecolor"
+{{ if $fromMise }}# from mise here: {{ end }}brew "junior/tap/kcx"   # kcx: one kubeconfig file per cluster, contexts and namespaces, profiles, a read-only shell; built from source, its tap is trusted in run_trust-taps.sh
+{{ if $fromMise }}# from mise here: {{ end }}brew "kubeshark"
+{{ if $fromMise }}# from mise here: {{ end }}brew "minikube"
+{{ if $fromMise }}# from mise here: {{ end }}brew "operator-sdk"
+{{ if $fromMise }}# from mise here: {{ end }}brew "stern"
+{{ if $fromMise }}# from mise here: {{ end }}brew "syft"
+{{ if $fromMise }}# from mise here: {{ end }}brew "trivy"
 
 # --- Formulae: dev utilities ---
-{{ if $intel }}# Intel, from mise: {{ end }}brew "asciinema"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "bat"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "chezmoi"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "direnv"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "duf"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "eza"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "fd"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "fx"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "fzf"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "gh"
+{{ if $fromMise }}# from mise here: {{ end }}brew "asciinema"
+{{ if $fromMise }}# from mise here: {{ end }}brew "bat"
+{{ if $fromMise }}# from mise here: {{ end }}brew "chezmoi"
+{{ if $fromMise }}# from mise here: {{ end }}brew "direnv"
+{{ if $fromMise }}# from mise here: {{ end }}brew "duf"
+{{ if $fromMise }}# from mise here: {{ end }}brew "eza"
+{{ if $fromMise }}# from mise here: {{ end }}brew "fd"
+{{ if $fromMise }}# from mise here: {{ end }}brew "fx"
+{{ if $fromMise }}# from mise here: {{ end }}brew "fzf"
+{{ if $fromMise }}# from mise here: {{ end }}brew "gh"
 brew "git"
 # delta is what ~/.gitconfig names as core.pager and the interactive diffFilter. It was
 # only ever declared for wsl-work (mise), so on a Mac git was configured to page
 # through a program that was not there. Unnoticed for months because a pager only
 # runs when stdout is a terminal, and most git here runs from tools and GUIs.
 brew "git-delta"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "git-filter-repo"
-{{ if not $intel }}brew "git-lfs"{{ end }}   # not on Intel: its man pages need asciidoctor, so Ruby, so Rust
-{{ if $intel }}# Intel, from mise: {{ end }}brew "httpie"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "jq"
-{{ if not $intel }}brew "lnav"{{ end }}   # not on Intel: needs Rust to build and ships no Intel binary
-{{ if $intel }}# Intel, from mise: {{ end }}brew "mkcert"
+{{ if $fromMise }}# from mise here: {{ end }}brew "git-filter-repo"
+{{ if not $fromMise }}brew "git-lfs"{{ end }}   # not on a lab node, nor on Intel: its man pages need asciidoctor, so Ruby, so Rust
+{{ if $fromMise }}# from mise here: {{ end }}brew "httpie"
+{{ if $fromMise }}# from mise here: {{ end }}brew "jq"
+{{ if not $fromMise }}brew "lnav"{{ end }}   # not on a lab node, nor on Intel: needs Rust to build and ships no Intel binary
+{{ if $fromMise }}# from mise here: {{ end }}brew "mkcert"
 brew "pinentry-mac"   # GUI passphrase prompt for gpg-agent (see ~/.gnupg/gpg-agent.conf)
-{{ if $intel }}# Intel, from mise: {{ end }}brew "ripgrep"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "junior/tap/skilla"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "terraform-docs"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "tfsec"
-{{ if not $intel }}brew "vhs"{{ end }}   # not on Intel: pulls the whole ffmpeg stack in from source
-{{ if not $intel }}brew "vsce"{{ end }}   # not on Intel: would rebuild node
-{{ if $intel }}# Intel, from mise: {{ end }}brew "yh"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "yq"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "zoxide"
+{{ if $fromMise }}# from mise here: {{ end }}brew "ripgrep"
+{{ if $fromMise }}# from mise here: {{ end }}brew "junior/tap/skilla"
+{{ if $fromMise }}# from mise here: {{ end }}brew "terraform-docs"
+{{ if $fromMise }}# from mise here: {{ end }}brew "tfsec"
+{{ if not $fromMise }}brew "vhs"{{ end }}   # not on a lab node, nor on Intel: pulls the whole ffmpeg stack in from source
+{{ if not $fromMise }}brew "vsce"{{ end }}   # not on a lab node, nor on Intel: would rebuild node
+{{ if $intel }}# from mise here: {{ end }}brew "yh"
+{{ if $fromMise }}# from mise here: {{ end }}brew "yq"
+{{ if $fromMise }}# from mise here: {{ end }}brew "zoxide"
 
 # --- Formulae: system / misc ---
-{{ if $intel }}# Intel, from mise: {{ end }}brew "agg"
+{{ if $fromMise }}# from mise here: {{ end }}brew "agg"
 brew "autoconf"
 {{ if not $lab }}brew "ffmpeg"{{ end }}
 {{ if not $lab }}brew "ghostscript"{{ end }}
@@ -175,10 +182,10 @@ brew "htop"
 {{ if not $lab }}brew "imagemagick"{{ end }}
 {{ if not $lab }}brew "librsvg"{{ end }}
 {{ if not $intel }}brew "mise"{{ end }}   # from its own release binary on Intel: run_install-mise-intel-mac.sh
-{{ if $intel }}# Intel, from mise: {{ end }}brew "pipx"
+{{ if $fromMise }}# from mise here: {{ end }}brew "pipx"
 brew "timewarrior"
-{{ if $intel }}# Intel, from mise: {{ end }}brew "tmux"
-{{ if not $intel }}brew "uv"{{ end }}   # from mise on Intel (Rust, and no Intel bottle)
+{{ if $fromMise }}# from mise here: {{ end }}brew "tmux"
+{{ if not $fromMise }}brew "uv"{{ end }}   # from mise on a lab node or an Intel Mac (Rust, and no Intel bottle)
 
 {{ if $lab -}}
 # --- Casks: lab node ---

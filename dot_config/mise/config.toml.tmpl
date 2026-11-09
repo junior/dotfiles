@@ -11,12 +11,13 @@
 {{- /* An appliance (role appliance, mac-personal) gets no tools from here, only the
        settings: what one appliance needs goes in its ~/.config/mise/conf.d/. */ -}}
 {{- $appliance := false -}}{{- if hasKey . "roles" }}{{ $appliance = has "appliance" .roles }}{{ end -}}
+{{- $lab := false -}}{{- if hasKey . "roles" }}{{ $lab = has "docker-engine" .roles }}{{ end -}}
 # mise global config — managed by chezmoi
 # Shared: language runtimes with per-project version sensitivity.
 # Per-machine: WSL uses mise for the full toolchain (no Homebrew there);
-# an Apple-silicon Mac uses mise only for languages + npm globals — everything
-# else is Homebrew. An Intel Mac also takes its command-line tools from mise
-# (the Intel block below): Homebrew builds no Intel bottles.
+# a desktop Mac on Apple silicon uses mise only for languages + npm globals —
+# everything else is Homebrew. An Intel Mac and a lab node (role docker-engine)
+# also take their command-line tools from mise: the block below.
 [settings]
 # Precompiled pythons only (python-build-standalone). Source builds break on
 # brand-new macOS SDKs (e.g. unguarded pipe2 on SDK 26.x) and need no toolchain;
@@ -151,16 +152,19 @@ opentofu = "latest"
 
 # Java/JDK lives here when needed (uncomment + adjust version):
 # java = "temurin-21"
-{{- if eq .chezmoi.arch "amd64" }}
+{{- if or (eq .chezmoi.arch "amd64") $lab }}
 
-# INTEL ONLY. Homebrew stopped building Intel bottles in September 2026, so a
-# formula upgrade on an Intel Mac compiles from source, often behind Rust and
-# LLVM. Every command-line tool below has an Intel Mac binary from its own
-# project, which is what mise fetches, and the Brewfile comments it out on Intel
-# (decisions 0006 and 0026 in the vault). Each was installed and run on an Intel
-# Mac on 2026-11-09. mise itself arrives the same way, from
-# run_install-mise-intel-mac.sh. On Apple silicon all of these stay in the
-# Brewfile and this does not render.
+# INTEL MACS AND LAB NODES. A lab node (role docker-engine) is a server, and on
+# a server boring wins: its command-line tools come from mise on any chip, each
+# the project's own release build, with no shared library tree to move under
+# them (decision 0027 in the vault). An Intel Mac does the same for another
+# reason: Homebrew has built no Intel bottles since September 2026, so a formula
+# upgrade there compiles from source, often behind Rust and LLVM (decisions 0006
+# and 0026). The Brewfile comments each of these out on such a Mac. Every one
+# was installed and run on an Intel Mac and on Apple silicon on 2026-11-09.
+# mise itself comes from Homebrew on Apple silicon and from its own release
+# binary on Intel (run_install-mise-intel-mac.sh). Elsewhere this does not
+# render.
 
 # --- Kubernetes / cloud-native ---
 calicoctl  = "latest"
@@ -216,7 +220,10 @@ yq         = "latest"
 zoxide     = "latest"
 "github:asciinema/asciinema" = "latest"
 "github:asciinema/agg"       = "latest"
+{{- if eq .chezmoi.arch "amd64" }}
+# yh publishes no Apple-silicon build: an Apple-silicon lab node keeps Homebrew's.
 "github:andreazorzetto/yh"   = "latest"
+{{- end }}
 # skilla is one script; its release carries it as the `skilla` file, as on wsl-work.
 "github:junior/skilla"       = "latest"
 {{- end }}
