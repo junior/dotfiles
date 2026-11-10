@@ -48,7 +48,7 @@
 # 1Password, no coding agents, no Docker. The one tool a single appliance needs goes
 # in its own ~/.Brewfile.local.
 
-# --- Formulae: shell + completions ---
+# --- Shell + completions ---
 brew "powerlevel10k"
 brew "zsh"
 brew "zsh-autosuggestions"
@@ -56,7 +56,7 @@ brew "zsh-completions"
 brew "zsh-history-substring-search"
 brew "zsh-syntax-highlighting"
 
-# --- Formulae: dev utilities ---
+# --- Dev utilities ---
 brew "bat"         # ~/.zshrc's cat alias and MANPAGER
 brew "chezmoi"
 brew "eza"         # ~/.zshrc's ls aliases
@@ -68,7 +68,7 @@ brew "jq"
 brew "ripgrep"
 brew "zoxide"
 
-# --- Formulae: system / misc ---
+# --- System / misc ---
 brew "htop"
 {{ if not $intel }}brew "mise"{{ end }}   # from its own release binary on Intel: run_install-mise-intel-mac.sh
 brew "tmux"
@@ -96,7 +96,7 @@ brew "tmux"
 tap "junior/tap"
 {{ if not $lab }}tap "hashicorp/tap"{{ end }}   # Vault left homebrew-core with its licence change; HashiCorp keeps this tap
 
-# --- Formulae: shell + completions ---
+# --- Shell + completions ---
 brew "powerlevel10k"
 brew "zsh"
 brew "zsh-autosuggestions"
@@ -104,7 +104,7 @@ brew "zsh-completions"
 brew "zsh-history-substring-search"
 brew "zsh-syntax-highlighting"
 
-# --- Cloud CLIs (not via mise) ---
+# --- Cloud CLIs ---
 {{ if not $lab }}brew "aliyun-cli"{{ end }}
 {{ if not $lab }}brew "awscli"{{ end }}
 {{ if not $lab }}cask "azure-cli"{{ end }}   # a cask since homebrew-core moved it there: Microsoft's own build
@@ -113,7 +113,7 @@ brew "zsh-syntax-highlighting"
 {{ if not $lab }}brew "hashicorp/tap/vault"{{ end }}   # the Vault CLI; its tap is trusted in run_trust-taps.sh
 {{ if not $lab }}cask "vercel"{{ end }}   # a cask since homebrew-core moved it there: Vercel's native build, no node
 
-# --- Formulae: kubernetes / cloud-native ---
+# --- Kubernetes / cloud-native ---
 {{ if $fromMise }}# from mise here: {{ end }}brew "calicoctl"
 {{ if $fromMise }}# from mise here: {{ end }}brew "cilium-cli"
 {{ if $fromMise }}# from mise here: {{ end }}brew "cosign"
@@ -138,7 +138,7 @@ brew "zsh-syntax-highlighting"
 {{ if $fromMise }}# from mise here: {{ end }}brew "syft"
 {{ if $fromMise }}# from mise here: {{ end }}brew "trivy"
 
-# --- Formulae: dev utilities ---
+# --- Dev utilities ---
 {{ if $fromMise }}# from mise here: {{ end }}brew "asciinema"
 {{ if $fromMise }}# from mise here: {{ end }}brew "bat"
 {{ if $fromMise }}# from mise here: {{ end }}brew "chezmoi"
@@ -172,7 +172,7 @@ brew "pinentry-mac"   # GUI passphrase prompt for gpg-agent (see ~/.gnupg/gpg-ag
 {{ if $fromMise }}# from mise here: {{ end }}brew "yq"
 {{ if $fromMise }}# from mise here: {{ end }}brew "zoxide"
 
-# --- Formulae: system / misc ---
+# --- System / misc ---
 {{ if $fromMise }}# from mise here: {{ end }}brew "agg"
 brew "autoconf"
 {{ if not $lab }}brew "ffmpeg"{{ end }}

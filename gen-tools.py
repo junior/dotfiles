@@ -267,7 +267,12 @@ def main():
     scripts_lm = script_tools("linux-minimal")
 
     def group(*sources):
-        """[(category, [keys])] merged across sources, first-seen order."""
+        """[(category, [keys])] merged across sources, first-seen order.
+
+        The Brewfile and the mise config share their category names, so a
+        category both use is one table. Casks are apps, not commands: their
+        `Casks: ...` groups come after the command-line categories, as in `tools`.
+        """
         order, byname = [], {}
         for src in sources:
             for cat, key in src:
@@ -278,6 +283,7 @@ def main():
                     order.append(cat)
                 if key not in byname[cat]:
                     byname[cat].append(key)
+        order.sort(key=lambda c: c.startswith("Casks:"))
         return [(c, byname[c]) for c in order]
 
     # One batched lookup for anything not installed on this machine.
@@ -306,10 +312,15 @@ def main():
                 lines.append(f"| {label} | {desc or '-'} |")
             lines.append("")
 
+    # Where a Mac's tools come from, named once here rather than per table: the
+    # tables are by category, and a category may hold tools from both.
+    from_mise = list(dict.fromkeys(split_key(k)[0] for _, keys in group(mise_mac)
+                                   for k in keys))
     section("mac-personal", group(brewfile, mise_mac, scripts_mac),
-            "Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns "
-            "here (languages and npm globals), and anything the `run_` installer "
-            "scripts put on this machine.")
+            "Homebrew from `dot_Brewfile.tmpl`; mise, from "
+            "`dot_config/mise/config.toml.tmpl`, for "
+            + ", ".join(from_mise[:-1]) + " and " + from_mise[-1]
+            + "; and anything the `run_` installer scripts put on this machine.")
     section("wsl-work", group(mise_wsl, scripts_wsl),
             "mise from `dot_config/mise/config.toml.tmpl` (no Homebrew on this "
             "box), plus the `run_` installer scripts for what mise cannot carry. "

@@ -7,9 +7,9 @@ Descriptions come from Homebrew's package metadata.
 
 ## mac-personal
 
-Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (languages and npm globals), and anything the `run_` installer scripts put on this machine.
+Homebrew from `dot_Brewfile.tmpl`; mise, from `dot_config/mise/config.toml.tmpl`, for node, python, terraform, opentofu, regctl, k10s and fantasticon; and anything the `run_` installer scripts put on this machine.
 
-### Formulae: shell + completions
+### Shell + completions
 
 | Tool | What it is |
 | --- | --- |
@@ -20,7 +20,7 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | [zsh-history-substring-search](https://github.com/zsh-users/zsh-history-substring-search) | Zsh port of Fish shell's history search |
 | [zsh-syntax-highlighting](https://github.com/zsh-users/zsh-syntax-highlighting) | Fish shell like syntax highlighting for zsh |
 
-### Cloud CLIs (not via mise)
+### Cloud CLIs
 
 | Tool | What it is |
 | --- | --- |
@@ -32,7 +32,7 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | [vault](https://developer.hashicorp.com/vault) | HashiCorp Vault CLI: read and write secrets, log in, manage leases |
 | [vercel](https://vercel.com/docs/cli) | Command-line interface for Vercel |
 
-### Formulae: kubernetes / cloud-native
+### Kubernetes / cloud-native
 
 | Tool | What it is |
 | --- | --- |
@@ -59,8 +59,9 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | [stern](https://github.com/stern/stern) | Tail multiple Kubernetes pods & their containers |
 | [syft](https://github.com/anchore/syft) | CLI for generating a Software Bill of Materials from container images |
 | [trivy](https://trivy.dev/) | Vulnerability scanner for container images, file systems, and Git repos |
+| [k10s](https://github.com/p10node/k10s) | Kubernetes TUI you can click: search, logs, exec and port-forward |
 
-### Formulae: dev utilities
+### Dev utilities
 
 | Tool | What it is |
 | --- | --- |
@@ -92,8 +93,9 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | [yh](https://github.com/andreazorzetto/yh) | YAML syntax highlighter to bring colours where only jq could |
 | [yq](https://github.com/mikefarah/yq) | Process YAML, JSON, XML, CSV and properties documents from the CLI |
 | [zoxide](https://github.com/ajeetdsouza/zoxide) | Shell extension to navigate your filesystem faster |
+| [fantasticon](https://github.com/tancredi/fantasticon) | Generate an icon font from a directory of SVG files |
 
-### Formulae: system / misc
+### System / misc
 
 | Tool | What it is |
 | --- | --- |
@@ -110,6 +112,31 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | [timewarrior](https://timewarrior.net/) | Command-line time tracking application |
 | [tmux](https://tmux.github.io/) | Terminal multiplexer |
 | [uv](https://docs.astral.sh/uv/) | Extremely fast Python package installer and resolver, written in Rust |
+
+### Languages + runtimes
+
+| Tool | What it is |
+| --- | --- |
+| [node](https://nodejs.org/) | Open-source, cross-platform JavaScript runtime environment |
+| [python](https://www.python.org/) | Python programming language |
+| [terraform](https://www.terraform.io/) | Build, change and version infrastructure declaratively |
+| [opentofu](https://opentofu.org/) | Drop-in replacement for Terraform. Infrastructure as Code Tool |
+
+### Containers + registries
+
+| Tool | What it is |
+| --- | --- |
+| [regctl](https://github.com/regclient/regclient) | Registry client for OCI images and artifacts, no daemon needed |
+
+### kubectl plugins (krew)
+
+| Tool | What it is |
+| --- | --- |
+| [access-matrix](https://krew.sigs.k8s.io/plugins/) | Show an RBAC access matrix for server resources |
+| [cert-manager](https://krew.sigs.k8s.io/plugins/) | Manage cert-manager resources from kubectl |
+| [deprecations](https://krew.sigs.k8s.io/plugins/) | Flag deprecated and removed Kubernetes APIs in a cluster |
+| [gadget](https://krew.sigs.k8s.io/plugins/) | Inspektor Gadget: eBPF tooling for inspecting workloads |
+| [grep](https://krew.sigs.k8s.io/plugins/) | Filter Kubernetes resources by matching their names |
 
 ### Casks: terminal + editors
 
@@ -191,43 +218,6 @@ Homebrew from `dot_Brewfile.tmpl`, the handful of tools mise owns here (language
 | Tool | What it is |
 | --- | --- |
 | [font-meslo-lg-nerd-font](https://github.com/ryanoasis/nerd-fonts) | MesloLG Nerd Font families (Meslo LG) |
-
-### Languages + runtimes
-
-| Tool | What it is |
-| --- | --- |
-| [node](https://nodejs.org/) | Open-source, cross-platform JavaScript runtime environment |
-| [python](https://www.python.org/) | Python programming language |
-| [terraform](https://www.terraform.io/) | Build, change and version infrastructure declaratively |
-| [opentofu](https://opentofu.org/) | Drop-in replacement for Terraform. Infrastructure as Code Tool |
-
-### Containers + registries
-
-| Tool | What it is |
-| --- | --- |
-| [regctl](https://github.com/regclient/regclient) | Registry client for OCI images and artifacts, no daemon needed |
-
-### Kubernetes / cloud-native
-
-| Tool | What it is |
-| --- | --- |
-| [k10s](https://github.com/p10node/k10s) | Kubernetes TUI you can click: search, logs, exec and port-forward |
-
-### Dev utilities
-
-| Tool | What it is |
-| --- | --- |
-| [fantasticon](https://github.com/tancredi/fantasticon) | Generate an icon font from a directory of SVG files |
-
-### kubectl plugins (krew)
-
-| Tool | What it is |
-| --- | --- |
-| [access-matrix](https://krew.sigs.k8s.io/plugins/) | Show an RBAC access matrix for server resources |
-| [cert-manager](https://krew.sigs.k8s.io/plugins/) | Manage cert-manager resources from kubectl |
-| [deprecations](https://krew.sigs.k8s.io/plugins/) | Flag deprecated and removed Kubernetes APIs in a cluster |
-| [gadget](https://krew.sigs.k8s.io/plugins/) | Inspektor Gadget: eBPF tooling for inspecting workloads |
-| [grep](https://krew.sigs.k8s.io/plugins/) | Filter Kubernetes resources by matching their names |
 
 ## wsl-work
 

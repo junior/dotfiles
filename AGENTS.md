@@ -98,6 +98,9 @@ maintainer's own tools: leave them alone.
 Upstream only: the maintainer's changes, and changes proposed to upstream.
 
 - Edit the source (`chezmoi cd`), never a live file.
+- Put a tool under one of the `# --- Category ---` headers. The Brewfile and the
+  mise config share their names, and casks go under the `Casks: ...` groups, so
+  a category both files use is one line in `tools` and one table in TOOLS.md.
 - A command-line tool added to the Mac's Brewfile also goes in the mise
   config's block for Intel Macs and lab nodes when its project publishes macOS
   builds for both chips, and its Brewfile line takes the `# from mise here:`

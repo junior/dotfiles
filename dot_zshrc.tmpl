@@ -513,11 +513,10 @@ up() {
 # also covers what the run_ installer scripts add, which these two files cannot
 # know about. `up` prints this; run `tools` any time to see it on its own.
 # One rule does live here: a command-line category is one line, whichever of the
-# two files declares its tools. The Brewfile's "Formulae: " prefix is dropped and
-# names compare without case, so its "kubernetes / cloud-native" and the mise
-# config's "Kubernetes / cloud-native" count together, and the line says how many
-# come from each when both supply some. Casks are apps, not commands: their
-# "Casks: " groups stay apart and print last.
+# two files declares its tools, and the line says how many come from each when
+# both supply some. Names compare without case, and a "Formulae: " prefix, which
+# the Brewfile's headers carried until 2026-11-09, is dropped. Casks are apps,
+# not commands: their "Casks: " groups stay apart and print last.
 tools() {
   local -a _cfg
   _cfg=( ~/.Brewfile(N) ~/.config/mise/config.toml(N) )
