@@ -512,6 +512,12 @@ up() {
 # in the dotfiles repo is the long form — one line per tool with a link, and it
 # also covers what the run_ installer scripts add, which these two files cannot
 # know about. `up` prints this; run `tools` any time to see it on its own.
+# One rule does live here: a command-line category is one line, whichever of the
+# two files declares its tools. The Brewfile's "Formulae: " prefix is dropped and
+# names compare without case, so its "kubernetes / cloud-native" and the mise
+# config's "Kubernetes / cloud-native" count together, and the line says how many
+# come from each when both supply some. Casks are apps, not commands: their
+# "Casks: " groups stay apart and print last.
 tools() {
   local -a _cfg
   _cfg=( ~/.Brewfile(N) ~/.config/mise/config.toml(N) )
@@ -522,18 +528,29 @@ tools() {
       line = $0
       sub(/^#[[:space:]]*---[[:space:]]*/, "", line)
       sub(/[[:space:]]*---[[:space:]]*$/, "", line)
-      cat = line
-      if (!(cat in seen)) { seen[cat] = 1; order[++k] = cat }
+      app = (line ~ /^Casks:/)
+      if (!app) {
+        sub(/^Formulae:[[:space:]]*/, "", line)
+        line = toupper(substr(line, 1, 1)) substr(line, 2)
+      }
+      cat = tolower(line)
+      if (!(cat in label)) { label[cat] = line; isapp[cat] = app; order[++k] = cat }
       next
     }
     cat == "" { next }
-    /^(brew|cask)[[:space:]]+"/ { n[cat]++; next }
-    /^"?[A-Za-z0-9_.:@\/+-]+"?[[:space:]]*=[[:space:]]*[{"]/ { n[cat]++ }
+    /^(brew|cask)[[:space:]]+"/ { n[cat]++; nbrew[cat]++; next }
+    /^"?[A-Za-z0-9_.:@\/+-]+"?[[:space:]]*=[[:space:]]*[{"]/ { n[cat]++; nmise[cat]++ }
     END {
-      for (i = 1; i <= k; i++) {
-        c = order[i]
-        if (n[c] > 0) { total += n[c]; printf "  %-38s %3d\n", c, n[c] }
-      }
+      for (pass = 0; pass <= 1; pass++)
+        for (i = 1; i <= k; i++) {
+          c = order[i]
+          if (isapp[c] != pass || n[c] == 0) continue
+          total += n[c]
+          if (nbrew[c] && nmise[c])
+            printf "  %-38s %3d  (%d brew, %d mise)\n", label[c], n[c], nbrew[c], nmise[c]
+          else
+            printf "  %-38s %3d\n", label[c], n[c]
+        }
       printf "  %-38s %3d\n", "total (brew/mise)", total
     }
   ' "${_cfg[@]}"
