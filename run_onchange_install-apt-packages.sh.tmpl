@@ -3,12 +3,13 @@
 # System (apt) packages for wsl-work that aren't available via mise.
 # tools-category: System packages (apt)
 # tools-installs-array: packages
-# Re-runs only when this file changes — add to the list below as you need them.
+# Re-runs only when this file changes; add to the list below as you need them.
 set -euo pipefail
 
 packages=(
   zip            # make .zip archives (tar is built-in; zip is handy on Windows)
   sshpass        # non-interactive ssh password auth (used by private-overlay tooling); not in mise's registry
+  librsvg2-bin   # rsvg-convert (SVG to PNG or PDF), the renderer the Macs get from librsvg; not in mise's registry
 )
 
 echo ">>> apt packages: ${packages[*]}"

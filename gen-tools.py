@@ -83,14 +83,15 @@ def script_tools(machine):
 
 
 def shell_array(text, name):
-    """Extract the words of a `name=( ... )` shell array, ignoring comments."""
-    m = re.search(rf"^{name}=\((.*?)\)", text, re.S | re.M)
-    if not m:
-        return []
-    words = []
-    for line in m.group(1).splitlines():
-        words += line.split("#", 1)[0].split()
-    return words
+    """Extract the words of a `name=( ... )` shell array, ignoring comments.
+
+    Comments go first, line by line, so a ")" inside one cannot end the array
+    early: zip's comment in the apt list has one, and until 2026-11-10 it hid
+    every package after zip.
+    """
+    code = "\n".join(line.split("#", 1)[0] for line in text.splitlines())
+    m = re.search(rf"^{name}=\((.*?)\)", code, re.S | re.M)
+    return m.group(1).split() if m else []
 
 
 def brew_meta():
@@ -218,6 +219,10 @@ OVERRIDES = {
                    "https://krew.sigs.k8s.io/plugins/"),
     "snyk":       ("Scan dependencies, containers and IaC for known vulnerabilities",
                    "https://snyk.io/"),
+    "sshpass":    ("Non-interactive ssh password authentication",
+                   "https://sourceforge.net/projects/sshpass/"),
+    "librsvg2-bin": ("rsvg-convert: render SVG files to PNG, PDF or PostScript with librsvg",
+                     "https://gitlab.gnome.org/GNOME/librsvg"),
 }
 
 

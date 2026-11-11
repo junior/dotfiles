@@ -312,6 +312,8 @@ mise from `dot_config/mise/config.toml.tmpl` (no Homebrew on this box), plus the
 | Tool | What it is |
 | --- | --- |
 | [zip](https://infozip.sourceforge.net/Zip.html) | Compression and file packaging/archive utility |
+| [sshpass](https://sourceforge.net/projects/sshpass/) | Non-interactive ssh password authentication |
+| [librsvg2-bin](https://gitlab.gnome.org/GNOME/librsvg) | rsvg-convert: render SVG files to PNG, PDF or PostScript with librsvg |
 
 ### System / observability
 
